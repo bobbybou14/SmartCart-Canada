@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-
+import '../service/supabase_product_service.dart';
 import '../models/cart_item.dart';
 import '../service/product_service.dart';
 import '../service/upc_lookup_service.dart';
@@ -37,8 +37,17 @@ class _ScanScreenState extends State<ScanScreen> {
       message = 'Looking up product...\n\nBarcode:\n$barcode';
     });
 
-    CartItem? product = ProductService.findByBarcode(barcode);
-    product ??= await UpcLookupService.lookup(barcode);
+    CartItem? product = await SupabaseProductService.findByBarcode(barcode);
+
+product ??= ProductService.findByBarcode(barcode);
+
+if (product == null) {
+  product = await UpcLookupService.lookup(barcode);
+
+  if (product != null) {
+    await SupabaseProductService.saveProduct(product);
+  }
+}
 
     setState(() {
       scannedItem = product;
