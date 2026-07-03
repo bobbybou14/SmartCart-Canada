@@ -45,6 +45,22 @@ class _CartScreenState extends State<CartScreen> {
     });
   }
 
+  Widget productImage(CartItem item) {
+    if (item.imageUrl.isEmpty) {
+      return const Icon(Icons.shopping_bag, size: 42, color: smartCartRed);
+    }
+
+    return Image.network(
+      item.imageUrl,
+      width: 55,
+      height: 55,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return const Icon(Icons.shopping_bag, size: 42, color: smartCartRed);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,12 +90,20 @@ class _CartScreenState extends State<CartScreen> {
                           vertical: 6,
                         ),
                         child: ListTile(
+                          leading: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: productImage(item),
+                          ),
                           title: Text(
-                            item.name,
+                            item.brand.isEmpty
+                                ? item.name
+                                : '${item.brand} ${item.name}',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            '\$${item.price.toStringAsFixed(2)} each • ${item.taxable ? "13% HST" : "No HST"}',
+                            '${item.size.isEmpty ? "" : "${item.size} • "}'
+                            '\$${item.price.toStringAsFixed(2)} each • '
+                            '${item.taxable ? "13% HST" : "No HST"}',
                           ),
                           trailing: Wrap(
                             crossAxisAlignment: WrapCrossAlignment.center,

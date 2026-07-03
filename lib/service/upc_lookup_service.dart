@@ -22,11 +22,18 @@ class UpcLookupService {
     }
 
     final product = data['product'];
+
     final name = product['product_name'] ?? 'Unknown Product';
+    final brand = product['brands'] ?? '';
+    final imageUrl = product['image_front_url'] ?? '';
+    final quantity = product['quantity'] ?? '';
 
     return CartItem(
       barcode: barcode,
       name: name,
+      brand: brand,
+      size: quantity,
+      imageUrl: imageUrl,
       price: 0.00,
       taxable: false,
     );
