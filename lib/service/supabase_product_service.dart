@@ -6,6 +6,12 @@ import '../models/product.dart';
 class SupabaseProductService {
   static final _client = Supabase.instance.client;
 
+  static Future<List<Product>> getProducts() async {
+    final response = await _client.from('products').select().order('name');
+
+    return response.map<Product>((item) => Product.fromMap(item)).toList();
+  }
+
   static Future<CartItem?> findByBarcode(String barcode) async {
     final response = await _client
         .from('products')

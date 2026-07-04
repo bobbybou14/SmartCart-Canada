@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/product.dart';
+import 'product_details_screen.dart';
+
 class ProductCatalogScreen extends StatefulWidget {
   const ProductCatalogScreen({super.key});
 
@@ -13,7 +16,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
 
   final client = Supabase.instance.client;
 
-  List products = [];
+  List<Product> products = [];
   bool loading = true;
 
   @override
@@ -23,28 +26,24 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
   }
 
   Future<void> loadProducts() async {
-    final response = await client
-        .from('products')
-        .select()
-        .order('name');
+    final response = await client.from('products').select().order('name');
 
     setState(() {
-      products = response;
+      products = response.map<Product>((item) => Product.fromMap(item)).toList();
       loading = false;
     });
   }
 
-  Widget productCard(Map product) {
+  Widget productCard(Product product) {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
-        leading: product['image_url'] != null &&
-                product['image_url'].toString().isNotEmpty
+        leading: product.imageUrl.isNotEmpty
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: Image.network(
-                  product['image_url'],
+                  product.imageUrl,
                   width: 50,
                   height: 50,
                   fit: BoxFit.cover,
@@ -58,14 +57,22 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
                 color: smartCartRed,
               ),
         title: Text(
-          product['name'] ?? '',
+          product.name,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
-          "${product['brand'] ?? ''}\n${product['size'] ?? ''}",
+          '${product.brand}\n${product.size}',
         ),
         isThreeLine: true,
         trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProductDetailsScreen(product: product),
+            ),
+          );
+        },
       ),
     );
   }
@@ -79,9 +86,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
         foregroundColor: Colors.white,
       ),
       body: loading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : products.isEmpty
               ? const Center(
                   child: Text(

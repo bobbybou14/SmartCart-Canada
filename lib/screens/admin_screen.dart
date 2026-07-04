@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'admin_products_screen.dart';
 import 'admin_stores_screen.dart';
+import 'admin_prices_screen.dart';
 import 'product_catalog_screen.dart';
 
 class AdminScreen extends StatelessWidget {
@@ -22,45 +23,17 @@ class AdminScreen extends StatelessWidget {
         children: [
           const Text(
             'Database Management',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 25),
-
-          _adminButton(
-            context,
-            Icons.inventory_2,
-            'Add Product',
-            'Create a new product',
-            const AdminProductsScreen(),
-          ),
-
-          _adminButton(
-            context,
-            Icons.list_alt,
-            'Product Catalog',
-            'Browse all products',
-            const ProductCatalogScreen(),
-          ),
-
-          _adminButton(
-            context,
-            Icons.store,
-            'Stores',
-            'Manage Canadian stores',
-            const AdminStoresScreen(),
-          ),
-
-          _adminButton(
-            context,
-            Icons.attach_money,
-            'Prices',
-            'Coming next...',
-            null,
-          ),
+          _adminButton(context, Icons.inventory_2, 'Add Product',
+              'Create a new product', const AdminProductsScreen()),
+          _adminButton(context, Icons.list_alt, 'Product Catalog',
+              'Browse all products', const ProductCatalogScreen()),
+          _adminButton(context, Icons.store, 'Stores',
+              'Manage Canadian stores', const AdminStoresScreen()),
+          _adminButton(context, Icons.attach_money, 'Prices',
+              'Add product prices', const AdminPricesScreen()),
         ],
       ),
     );
@@ -76,36 +49,15 @@ class AdminScreen extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 15),
       child: ListTile(
-        leading: Icon(
-          icon,
-          color: smartCartRed,
-          size: 34,
-        ),
+        leading: Icon(icon, color: smartCartRed, size: 34),
         title: Text(
           title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
-          if (screen == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('$title coming soon'),
-              ),
-            );
-            return;
-          }
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => screen,
-            ),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => screen!));
         },
       ),
     );
