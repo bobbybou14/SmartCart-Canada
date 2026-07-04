@@ -4,6 +4,7 @@ import 'models/cart_item.dart';
 import 'screens/home_screen.dart';
 import 'screens/scan_screen.dart';
 import 'screens/cart_screen.dart';
+import 'screens/admin_screen.dart';
 
 class SmartCartCanadaApp extends StatefulWidget {
   const SmartCartCanadaApp({super.key});
@@ -25,7 +26,9 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
 
   void addToCart(CartItem item) {
     setState(() {
-      final existingIndex = cart.indexWhere((cartItem) => cartItem.barcode == item.barcode);
+      final existingIndex = cart.indexWhere(
+        (cartItem) => cartItem.barcode == item.barcode,
+      );
 
       if (existingIndex >= 0) {
         cart[existingIndex].quantity++;
@@ -43,8 +46,15 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
       const HomeScreen(),
       ScanScreen(onItemScanned: addToCart),
       CartScreen(cart: cart),
-      const PlaceholderScreen(title: 'Savings', message: 'Savings and price comparisons will appear here.'),
-      const PlaceholderScreen(title: 'Settings', message: 'Settings will appear here.'),
+      const PlaceholderScreen(
+        title: 'Savings',
+        message: 'Savings and price comparisons will appear here.',
+      ),
+      const AdminScreen(),
+      const PlaceholderScreen(
+        title: 'Settings',
+        message: 'Settings will appear here.',
+      ),
     ];
 
     return MaterialApp(
@@ -72,6 +82,7 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
             BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Scan'),
             BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Cart'),
             BottomNavigationBarItem(icon: Icon(Icons.savings), label: 'Savings'),
+            BottomNavigationBarItem(icon: Icon(Icons.admin_panel_settings), label: 'Admin'),
             BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
           ],
         ),
