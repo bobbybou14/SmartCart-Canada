@@ -29,7 +29,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   Future<void> loadPrices() async {
-    final results = await PriceService.getPricesForProduct(widget.product.barcode);
+    final results =
+        await PriceService.getPricesForProduct(widget.product.barcode);
 
     setState(() {
       prices = results;
@@ -41,6 +42,21 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     if (prices.isEmpty) return 0;
     final total = prices.fold<double>(0, (sum, price) => sum + price.price);
     return total / prices.length;
+  }
+
+  double get lowestPrice {
+    if (prices.isEmpty) return 0;
+    return prices.first.price;
+  }
+
+  double get highestPrice {
+    if (prices.isEmpty) return 0;
+    return prices.map((p) => p.price).reduce((a, b) => a > b ? a : b);
+  }
+
+  double get potentialSavings {
+    if (prices.length < 2) return 0;
+    return highestPrice - lowestPrice;
   }
 
   Widget productImage() {
@@ -58,6 +74,76 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     );
   }
 
+  Widget priceSummaryCard() {
+    if (prices.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(18),
+          child: Text(
+            'No price data yet.',
+            style: TextStyle(fontSize: 18),
+          ),
+        ),
+      );
+    }
+
+    final bestPrice = prices.first;
+
+    return Card(
+      color: const Color(0xFFF7F7F7),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              '🥇 Best Price',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              bestPrice.store.isEmpty ? 'Unknown Store' : bestPrice.store,
+              style: const TextStyle(fontSize: 20),
+            ),
+            Text(
+              '\$${bestPrice.price.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            const Divider(height: 28),
+            _summaryRow('Average Price', averagePrice),
+            _summaryRow('Highest Price', highestPrice),
+            _summaryRow('Potential Savings', potentialSavings),
+            const SizedBox(height: 6),
+            Text(
+              '${prices.length} store${prices.length == 1 ? '' : 's'} compared',
+              style: const TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, double amount) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 17)),
+          Text(
+            '\$${amount.toStringAsFixed(2)}',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget priceCard(Price price, int index) {
     final isCheapest = index == 0;
 
@@ -72,9 +158,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           price.store.isEmpty ? 'Unknown Store' : price.store,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(
-          '${price.city}, ${price.province}',
-        ),
+        subtitle: Text('${price.city}, ${price.province}'),
         trailing: Text(
           '\$${price.price.toStringAsFixed(2)}',
           style: TextStyle(
@@ -127,7 +211,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 18),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 25),
+            priceSummaryCard(),
+            const SizedBox(height: 25),
             const Text(
               'Current Prices',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -140,16 +226,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 'No prices found yet.',
                 style: TextStyle(fontSize: 18),
               )
-            else ...[
+            else
               ...prices.asMap().entries.map(
                     (entry) => priceCard(entry.value, entry.key),
                   ),
-              const SizedBox(height: 15),
-              Text(
-                'Average Price: \$${averagePrice.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
           ],
         ),
       ),
