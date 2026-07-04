@@ -1,17 +1,103 @@
-# smartcart_canada
+# SmartCart Canada
 
-A new Flutter project.
+SmartCart Canada is a Flutter-based grocery shopping assistant designed for Canadian shoppers.
 
-## Getting Started
+The app helps users scan grocery products, identify items, estimate Ontario HST, manage a shopping cart, and eventually compare prices across Canadian retailers.
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## Current Features
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- Barcode scanning
+- Manual barcode lookup
+- Product lookup using Open Food Facts
+- Product images
+- Shopping cart
+- Quantity controls
+- Remove items from cart
+- Ontario HST calculation
+- Running subtotal and total
+- Supabase cloud backend
+- Cloud product lookup
+- Admin screen
+- Add products to Supabase
+- Add stores to Supabase
+- Product catalog
+- GitHub version control
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## Tech Stack
+
+- Flutter
+- Dart
+- Supabase
+- PostgreSQL
+- Open Food Facts API
+- GitHub
+
+---
+
+## Current Database Tables
+
+### products
+
+Stores product details such as:
+
+- barcode
+- name
+- brand
+- category
+- size
+- image URL
+- taxable status
+
+### stores
+
+Stores Canadian grocery retailers and locations.
+
+### prices
+
+Stores price records for products by store, city, province, and date.
+
+---
+
+## Roadmap
+
+### Version 0.5 — Canadian Price Intelligence
+
+- Add product prices
+- Display store price comparisons
+- Highlight cheapest store
+- Show last updated date
+- Add price submission screen
+
+### Version 0.6 — Receipt Intelligence
+
+- Receipt image upload
+- OCR receipt scanning
+- Automatic price extraction
+- Automatic cart creation from receipts
+
+### Version 0.7 — Smart Shopping
+
+- Shopping list optimization
+- Cheapest store recommendations
+- Savings tracker
+- Price history
+
+### Version 1.0 — Public Release
+
+- User accounts
+- Community pricing
+- Android release
+- iOS release
+- AI shopping assistant
+
+---
+
+## Project Status
+
+SmartCart Canada is currently in active early-stage development.
+
+The current focus is building a stable Flutter app, cloud backend, and Canadian grocery price intelligence system.
