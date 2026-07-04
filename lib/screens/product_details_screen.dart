@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../models/price.dart';
 import '../service/price_service.dart';
+import 'add_price_screen.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
@@ -171,6 +172,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     );
   }
 
+  Future<void> openAddPriceScreen() async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddPriceScreen(product: widget.product),
+      ),
+    );
+
+    if (saved == true) {
+      setState(() {
+        loading = true;
+      });
+      await loadPrices();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
@@ -180,6 +197,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         title: const Text('Product Details'),
         backgroundColor: smartCartRed,
         foregroundColor: Colors.white,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: openAddPriceScreen,
+        backgroundColor: smartCartRed,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Price'),
       ),
       body: RefreshIndicator(
         onRefresh: loadPrices,
@@ -230,6 +254,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ...prices.asMap().entries.map(
                     (entry) => priceCard(entry.value, entry.key),
                   ),
+            const SizedBox(height: 80),
           ],
         ),
       ),
