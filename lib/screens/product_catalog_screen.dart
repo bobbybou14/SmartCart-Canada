@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/product.dart';
+import '../core/widgets/product_card.dart';
 import 'product_details_screen.dart';
 
 class ProductCatalogScreen extends StatefulWidget {
@@ -34,45 +35,11 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
     });
   }
 
-  Widget productCard(Product product) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: ListTile(
-        leading: product.imageUrl.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Image.network(
-                  product.imageUrl,
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.shopping_bag),
-                ),
-              )
-            : const Icon(
-                Icons.shopping_bag,
-                size: 42,
-                color: smartCartRed,
-              ),
-        title: Text(
-          product.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          '${product.brand}\n${product.size}',
-        ),
-        isThreeLine: true,
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ProductDetailsScreen(product: product),
-            ),
-          );
-        },
+  void openProductDetails(Product product) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProductDetailsScreen(product: product),
       ),
     );
   }
@@ -81,7 +48,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Product Catalog"),
+        title: const Text('Product Catalog'),
         backgroundColor: smartCartRed,
         foregroundColor: Colors.white,
       ),
@@ -90,7 +57,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
           : products.isEmpty
               ? const Center(
                   child: Text(
-                    "No products found.",
+                    'No products found.',
                     style: TextStyle(fontSize: 22),
                   ),
                 )
@@ -99,7 +66,12 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
                   child: ListView.builder(
                     itemCount: products.length,
                     itemBuilder: (context, index) {
-                      return productCard(products[index]);
+                      final product = products[index];
+
+                      return ProductCard(
+                        product: product,
+                        onTap: () => openProductDetails(product),
+                      );
                     },
                   ),
                 ),

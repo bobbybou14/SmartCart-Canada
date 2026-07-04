@@ -45,7 +45,7 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
         barcode: '000003',
         name: 'Paper Towels',
         category: 'Household',
-        size: '6 rolls',
+        size: '6 Rolls',
         taxable: true,
       ),
       price: 9.99,
@@ -54,9 +54,8 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
 
   void addToCart(CartItem item) {
     setState(() {
-      final existingIndex = cart.indexWhere(
-        (cartItem) => cartItem.barcode == item.barcode,
-      );
+      final existingIndex =
+          cart.indexWhere((cartItem) => cartItem.barcode == item.barcode);
 
       if (existingIndex >= 0) {
         cart[existingIndex].quantity++;
@@ -71,9 +70,25 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
   @override
   Widget build(BuildContext context) {
     final screens = [
-      const HomeScreen(),
-      ScanScreen(onItemScanned: addToCart),
-      CartScreen(cart: cart),
+      HomeScreen(
+        cart: cart,
+        onScanTap: () {
+          setState(() {
+            selectedIndex = 1;
+          });
+        },
+        onCartTap: () {
+          setState(() {
+            selectedIndex = 2;
+          });
+        },
+      ),
+      ScanScreen(
+        onItemScanned: addToCart,
+      ),
+      CartScreen(
+        cart: cart,
+      ),
       const PlaceholderScreen(
         title: 'Savings',
         message: 'Savings and price comparisons will appear here.',
@@ -90,7 +105,9 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: smartCartRed),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: smartCartRed,
+        ),
         scaffoldBackgroundColor: Colors.white,
       ),
       home: Scaffold(
@@ -106,12 +123,30 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
             });
           },
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Scan'),
-            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Cart'),
-            BottomNavigationBarItem(icon: Icon(Icons.savings), label: 'Savings'),
-            BottomNavigationBarItem(icon: Icon(Icons.admin_panel_settings), label: 'Admin'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.qr_code_scanner),
+              label: 'Scan',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_cart),
+              label: 'Cart',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.savings),
+              label: 'Savings',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.admin_panel_settings),
+              label: 'Admin',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
           ],
         ),
       ),
