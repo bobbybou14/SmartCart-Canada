@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/cart_item.dart';
+import '../models/product.dart';
 import '../service/supabase_product_service.dart';
 
 class AdminProductsScreen extends StatefulWidget {
@@ -47,14 +47,13 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
       isSaving = true;
     });
 
-    final product = CartItem(
+    final product = Product(
       barcode: barcodeController.text.trim(),
       name: nameController.text.trim(),
       brand: brandController.text.trim(),
       category: categoryController.text.trim(),
       size: sizeController.text.trim(),
       imageUrl: imageUrlController.text.trim(),
-      price: 0.00,
       taxable: taxable,
     );
 

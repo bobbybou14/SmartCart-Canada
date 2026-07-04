@@ -1,30 +1,23 @@
+import 'product.dart';
+
 class CartItem {
-  final String barcode;
-  final String name;
-
-  final String brand;
-  final String category;
-  final String size;
-  final String imageUrl;
-  final String store;
-
-  final double price;
-  final bool taxable;
-
+  final Product product;
   int quantity;
+  final double price;
 
   CartItem({
-    required this.barcode,
-    required this.name,
-    this.brand = '',
-    this.category = '',
-    this.size = '',
-    this.imageUrl = '',
-    this.store = '',
+    required this.product,
     required this.price,
-    required this.taxable,
     this.quantity = 1,
   });
+
+  String get barcode => product.barcode;
+  String get name => product.name;
+  String get brand => product.brand;
+  String get category => product.category;
+  String get size => product.size;
+  String get imageUrl => product.imageUrl;
+  bool get taxable => product.taxable;
 
   double get subtotal => price * quantity;
 

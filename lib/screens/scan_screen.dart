@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../service/supabase_product_service.dart';
+
 import '../models/cart_item.dart';
 import '../service/product_service.dart';
 import '../service/upc_lookup_service.dart';
+import '../service/supabase_product_service.dart';
 
 class ScanScreen extends StatefulWidget {
   final void Function(CartItem item) onItemScanned;
@@ -39,15 +40,15 @@ class _ScanScreenState extends State<ScanScreen> {
 
     CartItem? product = await SupabaseProductService.findByBarcode(barcode);
 
-product ??= ProductService.findByBarcode(barcode);
+    product ??= ProductService.findByBarcode(barcode);
 
-if (product == null) {
-  product = await UpcLookupService.lookup(barcode);
+    if (product == null) {
+      product = await UpcLookupService.lookup(barcode);
 
-  if (product != null) {
-    await SupabaseProductService.saveProduct(product);
-  }
-}
+      if (product != null) {
+        await SupabaseProductService.saveProduct(product.product);
+      }
+    }
 
     setState(() {
       scannedItem = product;

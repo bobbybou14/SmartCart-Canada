@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/cart_item.dart';
+import '../models/product.dart';
 
 class UpcLookupService {
   static Future<CartItem?> lookup(String barcode) async {
@@ -21,21 +22,20 @@ class UpcLookupService {
       return null;
     }
 
-    final product = data['product'];
+    final productData = data['product'];
 
-    final name = product['product_name'] ?? 'Unknown Product';
-    final brand = product['brands'] ?? '';
-    final imageUrl = product['image_front_url'] ?? '';
-    final quantity = product['quantity'] ?? '';
+    final product = Product(
+      barcode: barcode,
+      name: productData['product_name'] ?? 'Unknown Product',
+      brand: productData['brands'] ?? '',
+      size: productData['quantity'] ?? '',
+      imageUrl: productData['image_front_url'] ?? '',
+      taxable: false,
+    );
 
     return CartItem(
-      barcode: barcode,
-      name: name,
-      brand: brand,
-      size: quantity,
-      imageUrl: imageUrl,
+      product: product,
       price: 0.00,
-      taxable: false,
     );
   }
 }

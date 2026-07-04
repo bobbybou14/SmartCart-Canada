@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'models/cart_item.dart';
+import 'models/product.dart';
 import 'screens/home_screen.dart';
 import 'screens/scan_screen.dart';
 import 'screens/cart_screen.dart';
@@ -19,9 +20,36 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
   int selectedIndex = 0;
 
   final List<CartItem> cart = [
-    CartItem(barcode: '000001', name: 'Milk', price: 5.49, taxable: false),
-    CartItem(barcode: '000002', name: 'Bread', price: 3.29, taxable: false),
-    CartItem(barcode: '000003', name: 'Paper Towels', price: 9.99, taxable: true),
+    CartItem(
+      product: const Product(
+        barcode: '000001',
+        name: 'Milk',
+        category: 'Dairy',
+        size: '2 L',
+        taxable: false,
+      ),
+      price: 5.49,
+    ),
+    CartItem(
+      product: const Product(
+        barcode: '000002',
+        name: 'Bread',
+        category: 'Bakery',
+        size: '675 g',
+        taxable: false,
+      ),
+      price: 3.29,
+    ),
+    CartItem(
+      product: const Product(
+        barcode: '000003',
+        name: 'Paper Towels',
+        category: 'Household',
+        size: '6 rolls',
+        taxable: true,
+      ),
+      price: 9.99,
+    ),
   ];
 
   void addToCart(CartItem item) {
