@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
 import '../core/widgets/dashboard_card.dart';
 import '../models/cart_item.dart';
 import '../service/dashboard_service.dart';
@@ -21,8 +22,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const Color smartCartRed = Color(0xFFD6001C);
-
   double potentialSavings = 0;
   String bestStore = '--';
   bool loadingInsights = true;
@@ -36,10 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didUpdateWidget(HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.cart != widget.cart) {
-      loadDashboardInsights();
-    }
+    loadDashboardInsights();
   }
 
   Future<void> loadDashboardInsights() async {
@@ -63,11 +59,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('SmartCart Canada'),
-        backgroundColor: smartCartRed,
-        foregroundColor: Colors.white,
       ),
       body: RefreshIndicator(
         onRefresh: loadDashboardInsights,
+        color: AppColors.primary,
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
@@ -87,7 +82,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 30),
-
             DashboardCard(
               icon: Icons.qr_code_scanner,
               title: 'Scan Product',
@@ -95,7 +89,6 @@ class _HomeScreenState extends State<HomeScreen> {
               subtitle: 'Scan a barcode to compare prices',
               onTap: widget.onScanTap,
             ),
-
             DashboardCard(
               icon: Icons.shopping_cart,
               title: 'Shopping Cart',
@@ -103,22 +96,21 @@ class _HomeScreenState extends State<HomeScreen> {
               subtitle: '\$${cartTotal.toStringAsFixed(2)} estimated total',
               onTap: widget.onCartTap,
             ),
-
             DashboardCard(
               icon: Icons.savings,
               title: 'Potential Savings',
-              value: loadingInsights ? '...' : '\$${potentialSavings.toStringAsFixed(2)}',
+              value: loadingInsights
+                  ? '...'
+                  : '\$${potentialSavings.toStringAsFixed(2)}',
               subtitle: 'Based on cheapest known prices',
             ),
-
             DashboardCard(
               icon: Icons.store,
               title: 'Best Store Today',
               value: loadingInsights ? '...' : bestStore,
               subtitle: 'Based on your current cart',
             ),
-
-            DashboardCard(
+            const DashboardCard(
               icon: Icons.local_offer,
               title: 'Recent Price Drops',
               value: '0',
