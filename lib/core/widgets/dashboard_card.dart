@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 class DashboardCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -16,8 +18,6 @@ class DashboardCard extends StatelessWidget {
     this.onTap,
   });
 
-  static const Color smartCartRed = Color(0xFFD6001C);
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -30,8 +30,11 @@ class DashboardCard extends StatelessWidget {
         onTap: onTap,
         contentPadding: const EdgeInsets.all(18),
         leading: CircleAvatar(
-          backgroundColor: smartCartRed.withOpacity(0.12),
-          child: Icon(icon, color: smartCartRed),
+          backgroundColor: AppColors.primary.withOpacity(0.12),
+          child: Icon(
+            icon,
+            color: AppColors.primary,
+          ),
         ),
         title: Text(
           title,
