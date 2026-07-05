@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+
+import '../core/theme/app_colors.dart';
 import '../models/cart_item.dart';
+import 'shopping_optimizer_screen.dart';
 
 class CartScreen extends StatefulWidget {
   final List<CartItem> cart;
@@ -11,8 +14,6 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  static const Color smartCartRed = Color(0xFFD6001C);
-
   double get subtotal {
     return widget.cart.fold(0, (total, item) => total + item.subtotal);
   }
@@ -45,9 +46,22 @@ class _CartScreenState extends State<CartScreen> {
     });
   }
 
+  void openOptimizer() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ShoppingOptimizerScreen(cart: widget.cart),
+      ),
+    );
+  }
+
   Widget productImage(CartItem item) {
     if (item.imageUrl.isEmpty) {
-      return const Icon(Icons.shopping_bag, size: 42, color: smartCartRed);
+      return const Icon(
+        Icons.shopping_bag,
+        size: 42,
+        color: AppColors.primary,
+      );
     }
 
     return Image.network(
@@ -56,7 +70,11 @@ class _CartScreenState extends State<CartScreen> {
       height: 55,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
-        return const Icon(Icons.shopping_bag, size: 42, color: smartCartRed);
+        return const Icon(
+          Icons.shopping_bag,
+          size: 42,
+          color: AppColors.primary,
+        );
       },
     );
   }
@@ -66,8 +84,6 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shopping Cart'),
-        backgroundColor: smartCartRed,
-        foregroundColor: Colors.white,
       ),
       body: widget.cart.isEmpty
           ? const Center(
@@ -134,8 +150,8 @@ class _CartScreenState extends State<CartScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: const BoxDecoration(
-                    color: Color(0xFFF7F7F7),
-                    border: Border(top: BorderSide(color: Colors.black12)),
+                    color: AppColors.surface,
+                    border: Border(top: BorderSide(color: AppColors.divider)),
                   ),
                   child: Column(
                     children: [
@@ -143,6 +159,15 @@ class _CartScreenState extends State<CartScreen> {
                       _totalRow('Ontario HST', hst),
                       const Divider(),
                       _totalRow('Estimated Total', total, bold: true),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: openOptimizer,
+                          icon: const Icon(Icons.auto_graph),
+                          label: const Text('Optimize Cart'),
+                        ),
+                      ),
                     ],
                   ),
                 ),

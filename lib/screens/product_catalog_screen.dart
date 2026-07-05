@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../models/product.dart';
 import '../core/widgets/product_card.dart';
+import '../models/cart_item.dart';
+import '../models/product.dart';
+import '../service/supabase_product_service.dart';
 import 'product_details_screen.dart';
 
 class ProductCatalogScreen extends StatefulWidget {
-  const ProductCatalogScreen({super.key});
+  final void Function(CartItem item)? onAddToCart;
+
+  const ProductCatalogScreen({
+    super.key,
+    this.onAddToCart,
+  });
 
   @override
   State<ProductCatalogScreen> createState() => _ProductCatalogScreenState();
 }
 
 class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
-  static const Color smartCartRed = Color(0xFFD6001C);
-
-  final client = Supabase.instance.client;
-
   List<Product> products = [];
   bool loading = true;
 
@@ -27,10 +29,12 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
   }
 
   Future<void> loadProducts() async {
-    final response = await client.from('products').select().order('name');
+    final results = await SupabaseProductService.getProducts();
+
+    if (!mounted) return;
 
     setState(() {
-      products = response.map<Product>((item) => Product.fromMap(item)).toList();
+      products = results;
       loading = false;
     });
   }
@@ -39,7 +43,10 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ProductDetailsScreen(product: product),
+        builder: (_) => ProductDetailsScreen(
+          product: product,
+          onAddToCart: widget.onAddToCart,
+        ),
       ),
     );
   }
@@ -49,8 +56,6 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Product Catalog'),
-        backgroundColor: smartCartRed,
-        foregroundColor: Colors.white,
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())

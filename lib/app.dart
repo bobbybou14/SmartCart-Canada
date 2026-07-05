@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'core/theme/app_theme.dart';
 import 'models/cart_item.dart';
-import 'models/product.dart';
 import 'screens/admin_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/product_catalog_screen.dart';
 import 'screens/scan_screen.dart';
 
 class SmartCartCanadaApp extends StatefulWidget {
@@ -18,38 +18,7 @@ class SmartCartCanadaApp extends StatefulWidget {
 class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
   int selectedIndex = 0;
 
-  final List<CartItem> cart = [
-    CartItem(
-      product: const Product(
-        barcode: '000001',
-        name: 'Milk',
-        category: 'Dairy',
-        size: '2 L',
-        taxable: false,
-      ),
-      price: 5.49,
-    ),
-    CartItem(
-      product: const Product(
-        barcode: '000002',
-        name: 'Bread',
-        category: 'Bakery',
-        size: '675 g',
-        taxable: false,
-      ),
-      price: 3.29,
-    ),
-    CartItem(
-      product: const Product(
-        barcode: '000003',
-        name: 'Paper Towels',
-        category: 'Household',
-        size: '6 Rolls',
-        taxable: true,
-      ),
-      price: 9.99,
-    ),
-  ];
+  final List<CartItem> cart = [];
 
   void addToCart(CartItem item) {
     setState(() {
@@ -62,7 +31,7 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
         cart.add(item);
       }
 
-      selectedIndex = 2;
+      selectedIndex = 3;
     });
   }
 
@@ -78,21 +47,18 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
         },
         onCartTap: () {
           setState(() {
-            selectedIndex = 2;
+            selectedIndex = 3;
           });
         },
       ),
       ScanScreen(onItemScanned: addToCart),
+      ProductCatalogScreen(onAddToCart: addToCart),
       CartScreen(cart: cart),
       const PlaceholderScreen(
         title: 'Savings',
         message: 'Savings and price comparisons will appear here.',
       ),
       const AdminScreen(),
-      const PlaceholderScreen(
-        title: 'Settings',
-        message: 'Settings will appear here.',
-      ),
     ];
 
     return MaterialApp(
@@ -116,6 +82,10 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
               label: 'Scan',
             ),
             BottomNavigationBarItem(
+              icon: Icon(Icons.list_alt),
+              label: 'Browse',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(Icons.shopping_cart),
               label: 'Cart',
             ),
@@ -124,7 +94,6 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
               icon: Icon(Icons.admin_panel_settings),
               label: 'Admin',
             ),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
           ],
         ),
       ),

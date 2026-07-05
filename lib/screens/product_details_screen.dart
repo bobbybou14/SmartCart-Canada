@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
+import '../models/cart_item.dart';
 import '../models/product.dart';
 import '../models/price.dart';
 import '../service/price_service.dart';
@@ -7,10 +9,12 @@ import 'add_price_screen.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
+  final void Function(CartItem item)? onAddToCart;
 
   const ProductDetailsScreen({
     super.key,
     required this.product,
+    this.onAddToCart,
   });
 
   @override
@@ -18,8 +22,6 @@ class ProductDetailsScreen extends StatefulWidget {
 }
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
-  static const Color smartCartRed = Color(0xFFD6001C);
-
   List<Price> prices = [];
   bool loading = true;
 
@@ -30,8 +32,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   Future<void> loadPrices() async {
-    final results =
-        await PriceService.getPricesForProduct(widget.product.barcode);
+    final results = await PriceService.getPricesForProduct(widget.product.barcode);
+
+    if (!mounted) return;
 
     setState(() {
       prices = results;
@@ -45,10 +48,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     return total / prices.length;
   }
 
-  double get lowestPrice {
-    if (prices.isEmpty) return 0;
-    return prices.first.price;
-  }
+  double get lowestPrice => prices.isEmpty ? 0 : prices.first.price;
 
   double get highestPrice {
     if (prices.isEmpty) return 0;
@@ -60,9 +60,44 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     return highestPrice - lowestPrice;
   }
 
+  Future<void> openAddPriceScreen() async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddPriceScreen(product: widget.product),
+      ),
+    );
+
+    if (saved == true) {
+      setState(() {
+        loading = true;
+      });
+      await loadPrices();
+    }
+  }
+
+  void addToCart() {
+    if (widget.onAddToCart == null) return;
+
+    final item = CartItem(
+      product: widget.product,
+      price: lowestPrice,
+    );
+
+    widget.onAddToCart!(item);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${widget.product.name} added to cart')),
+    );
+  }
+
   Widget productImage() {
     if (widget.product.imageUrl.isEmpty) {
-      return const Icon(Icons.shopping_bag, size: 110, color: smartCartRed);
+      return const Icon(
+        Icons.shopping_bag,
+        size: 110,
+        color: AppColors.primary,
+      );
     }
 
     return Image.network(
@@ -70,7 +105,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       height: 160,
       fit: BoxFit.contain,
       errorBuilder: (_, __, ___) {
-        return const Icon(Icons.shopping_bag, size: 110, color: smartCartRed);
+        return const Icon(
+          Icons.shopping_bag,
+          size: 110,
+          color: AppColors.primary,
+        );
       },
     );
   }
@@ -91,7 +130,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     final bestPrice = prices.first;
 
     return Card(
-      color: const Color(0xFFF7F7F7),
+      color: AppColors.surface,
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
@@ -111,7 +150,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.green,
+                color: AppColors.success,
               ),
             ),
             const Divider(height: 28),
@@ -153,7 +192,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       child: ListTile(
         leading: Icon(
           isCheapest ? Icons.emoji_events : Icons.store,
-          color: isCheapest ? Colors.orange : smartCartRed,
+          color: isCheapest ? AppColors.warning : AppColors.primary,
         ),
         title: Text(
           price.store.isEmpty ? 'Unknown Store' : price.store,
@@ -165,27 +204,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: isCheapest ? Colors.green : Colors.black,
+            color: isCheapest ? AppColors.success : AppColors.textPrimary,
           ),
         ),
       ),
     );
-  }
-
-  Future<void> openAddPriceScreen() async {
-    final saved = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AddPriceScreen(product: widget.product),
-      ),
-    );
-
-    if (saved == true) {
-      setState(() {
-        loading = true;
-      });
-      await loadPrices();
-    }
   }
 
   @override
@@ -195,18 +218,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Product Details'),
-        backgroundColor: smartCartRed,
-        foregroundColor: Colors.white,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: openAddPriceScreen,
-        backgroundColor: smartCartRed,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Price'),
       ),
       body: RefreshIndicator(
         onRefresh: loadPrices,
+        color: AppColors.primary,
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
@@ -234,6 +249,25 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               product.taxable ? 'Ontario HST Applies' : 'No HST',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 25),
+            if (widget.onAddToCart != null)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: addToCart,
+                  icon: const Icon(Icons.shopping_cart),
+                  label: const Text('Add to Cart'),
+                ),
+              ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: openAddPriceScreen,
+                icon: const Icon(Icons.add),
+                label: const Text('Add Price'),
+              ),
             ),
             const SizedBox(height: 25),
             priceSummaryCard(),
