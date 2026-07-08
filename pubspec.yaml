@@ -1,5 +1,5 @@
 name: smartcart_canada
-description: "A new Flutter project."
+description: "SmartCart Canada - Privacy-first grocery price intelligence for Canadians."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -12,14 +12,26 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
+
+  # Barcode Scanner
   mobile_scanner: ^7.2.0
+
+  # HTTP Requests
   http: ^1.6.0
+
+  # Supabase
   supabase_flutter: ^2.9.1
+
+  # Environment Variables
   flutter_dotenv: ^5.2.1
+
+  # Receipt Images
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
   flutter_lints: ^6.0.0
 
 flutter:

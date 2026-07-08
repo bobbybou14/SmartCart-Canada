@@ -6,6 +6,7 @@ import 'screens/admin_screen.dart';
 import 'screens/cart_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/product_catalog_screen.dart';
+import 'screens/receipt_upload_screen.dart';
 import 'screens/scan_screen.dart';
 
 class SmartCartCanadaApp extends StatefulWidget {
@@ -54,10 +55,7 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
       ScanScreen(onItemScanned: addToCart),
       ProductCatalogScreen(onAddToCart: addToCart),
       CartScreen(cart: cart),
-      const PlaceholderScreen(
-        title: 'Savings',
-        message: 'Savings and price comparisons will appear here.',
-      ),
+      const ReceiptUploadScreen(),
       const AdminScreen(),
     ];
 
@@ -89,39 +87,15 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
               icon: Icon(Icons.shopping_cart),
               label: 'Cart',
             ),
-            BottomNavigationBarItem(icon: Icon(Icons.savings), label: 'Savings'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long),
+              label: 'Receipts',
+            ),
             BottomNavigationBarItem(
               icon: Icon(Icons.admin_panel_settings),
               label: 'Admin',
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class PlaceholderScreen extends StatelessWidget {
-  final String title;
-  final String message;
-
-  const PlaceholderScreen({
-    super.key,
-    required this.title,
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-      ),
-      body: Center(
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 22),
         ),
       ),
     );
