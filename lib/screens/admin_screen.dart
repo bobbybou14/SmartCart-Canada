@@ -7,6 +7,7 @@ import 'admin_stores_screen.dart';
 import 'ocr_test_screen.dart';
 import 'product_catalog_screen.dart';
 import 'product_matcher_test_screen.dart';
+import 'receipt_intelligence_screen.dart';
 import 'receipt_parser_test_screen.dart';
 
 class AdminScreen extends StatelessWidget {
@@ -84,6 +85,14 @@ class AdminScreen extends StatelessWidget {
             'Product Matcher Test',
             'Match receipt items to your SmartCart products',
             const ProductMatcherTestScreen(),
+          ),
+
+          _adminButton(
+            context,
+            Icons.auto_awesome,
+            'Receipt Intelligence',
+            'Run the complete receipt processing pipeline',
+            const ReceiptIntelligenceScreen(),
           ),
         ],
       ),
