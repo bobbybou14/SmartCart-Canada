@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../models/receipt.dart';
 import '../service/receipt_service.dart';
+import 'receipt_details_screen.dart';
 
 class ReceiptHistoryScreen extends StatefulWidget {
   const ReceiptHistoryScreen({super.key});
@@ -32,6 +33,15 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
     });
   }
 
+  void openReceiptDetails(Receipt receipt) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReceiptDetailsScreen(receipt: receipt),
+      ),
+    );
+  }
+
   String formatDate(DateTime? date) {
     if (date == null) return 'Unknown date';
 
@@ -45,6 +55,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
   Widget receiptCard(Receipt receipt) {
     return Card(
       child: ListTile(
+        onTap: () => openReceiptDetails(receipt),
         leading: const Icon(
           Icons.receipt_long,
           color: AppColors.primary,
@@ -59,10 +70,7 @@ class _ReceiptHistoryScreenState extends State<ReceiptHistoryScreen> {
           'Created: ${formatDate(receipt.createdAt)}',
         ),
         isThreeLine: true,
-        trailing: Icon(
-          receipt.rawImageStored ? Icons.image : Icons.privacy_tip,
-          color: receipt.rawImageStored ? AppColors.warning : AppColors.success,
-        ),
+        trailing: const Icon(Icons.chevron_right),
       ),
     );
   }
