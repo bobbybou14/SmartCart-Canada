@@ -6,6 +6,7 @@ import 'admin_products_screen.dart';
 import 'admin_stores_screen.dart';
 import 'ocr_test_screen.dart';
 import 'product_catalog_screen.dart';
+import 'product_matcher_test_screen.dart';
 import 'receipt_parser_test_screen.dart';
 
 class AdminScreen extends StatelessWidget {
@@ -22,9 +23,13 @@ class AdminScreen extends StatelessWidget {
         children: [
           const Text(
             'Database Management',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 25),
+
           _adminButton(
             context,
             Icons.inventory_2,
@@ -32,6 +37,7 @@ class AdminScreen extends StatelessWidget {
             'Create a new product',
             const AdminProductsScreen(),
           ),
+
           _adminButton(
             context,
             Icons.list_alt,
@@ -39,6 +45,7 @@ class AdminScreen extends StatelessWidget {
             'Browse all products',
             const ProductCatalogScreen(),
           ),
+
           _adminButton(
             context,
             Icons.store,
@@ -46,6 +53,7 @@ class AdminScreen extends StatelessWidget {
             'Manage Canadian stores',
             const AdminStoresScreen(),
           ),
+
           _adminButton(
             context,
             Icons.attach_money,
@@ -53,6 +61,7 @@ class AdminScreen extends StatelessWidget {
             'Add product prices',
             const AdminPricesScreen(),
           ),
+
           _adminButton(
             context,
             Icons.document_scanner,
@@ -60,12 +69,21 @@ class AdminScreen extends StatelessWidget {
             'Test receipt text extraction',
             const OcrTestScreen(),
           ),
+
           _adminButton(
             context,
             Icons.receipt_long,
             'Receipt Parser Test',
-            'Test extracting receipt items and prices',
+            'Parse receipt text into structured data',
             const ReceiptParserTestScreen(),
+          ),
+
+          _adminButton(
+            context,
+            Icons.psychology,
+            'Product Matcher Test',
+            'Match receipt items to your SmartCart products',
+            const ProductMatcherTestScreen(),
           ),
         ],
       ),
@@ -82,15 +100,27 @@ class AdminScreen extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 15),
       child: ListTile(
-        leading: Icon(icon, color: AppColors.primary, size: 34),
+        leading: Icon(
+          icon,
+          color: AppColors.primary,
+          size: 34,
+        ),
         title: Text(
           title,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => screen,
+            ),
+          );
         },
       ),
     );

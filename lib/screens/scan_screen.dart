@@ -3,8 +3,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../models/cart_item.dart';
 import '../service/product_service.dart';
-import '../service/upc_lookup_service.dart';
 import '../service/supabase_product_service.dart';
+import '../service/upc_lookup_service.dart';
 
 class ScanScreen extends StatefulWidget {
   final void Function(CartItem item) onItemScanned;
@@ -40,7 +40,7 @@ class _ScanScreenState extends State<ScanScreen> {
 
     CartItem? product = await SupabaseProductService.findByBarcode(barcode);
 
-    product ??= ProductService.findByBarcode(barcode);
+    product ??= await ProductService.findByBarcode(barcode);
 
     if (product == null) {
       product = await UpcLookupService.lookup(barcode);
@@ -49,6 +49,8 @@ class _ScanScreenState extends State<ScanScreen> {
         await SupabaseProductService.saveProduct(product.product);
       }
     }
+
+    if (!mounted) return;
 
     setState(() {
       scannedItem = product;
@@ -153,7 +155,9 @@ class _ScanScreenState extends State<ScanScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          scannedItem!.taxable ? 'Ontario HST Applies' : 'No HST',
+                          scannedItem!.taxable
+                              ? 'Ontario HST Applies'
+                              : 'No HST',
                           style: const TextStyle(fontSize: 18),
                         ),
                         const SizedBox(height: 20),

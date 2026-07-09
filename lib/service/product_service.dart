@@ -1,45 +1,51 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../models/cart_item.dart';
 import '../models/product.dart';
 
 class ProductService {
-  static final Map<String, Product> products = {
-    '000001': const Product(
-      barcode: '000001',
-      name: 'Milk',
-      category: 'Dairy',
-      size: '2 L',
-      taxable: false,
-    ),
-    '000002': const Product(
-      barcode: '000002',
-      name: 'Bread',
-      category: 'Bakery',
-      size: '675 g',
-      taxable: false,
-    ),
-    '000003': const Product(
-      barcode: '000003',
-      name: 'Paper Towels',
-      category: 'Household',
-      size: '6 rolls',
-      taxable: true,
-    ),
-  };
+  static final SupabaseClient _supabase = Supabase.instance.client;
 
-  static CartItem? findByBarcode(String barcode) {
-    final product = products[barcode];
+  static Future<List<Product>> getProducts() async {
+    final response = await _supabase
+        .from('products')
+        .select()
+        .order('name');
 
-    if (product == null) {
+    return response
+        .map<Product>((item) => Product.fromMap(item))
+        .toList();
+  }
+
+  static Future<CartItem?> findByBarcode(String barcode) async {
+    final response = await _supabase
+        .from('products')
+        .select()
+        .eq('barcode', barcode)
+        .maybeSingle();
+
+    if (response == null) {
       return null;
+    }
+
+    final product = Product.fromMap(response);
+
+    final priceResponse = await _supabase
+        .from('prices')
+        .select('price')
+        .eq('barcode', barcode)
+        .order('updated_at', ascending: false)
+        .limit(1);
+
+    double price = 0;
+
+    if (priceResponse.isNotEmpty) {
+      price = (priceResponse.first['price'] as num).toDouble();
     }
 
     return CartItem(
       product: product,
-      price: barcode == '000001'
-          ? 5.49
-          : barcode == '000002'
-              ? 3.29
-              : 9.99,
+      price: price,
     );
   }
 }
