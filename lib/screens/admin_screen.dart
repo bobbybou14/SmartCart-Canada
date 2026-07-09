@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
+import 'admin_prices_screen.dart';
 import 'admin_products_screen.dart';
 import 'admin_stores_screen.dart';
-import 'admin_prices_screen.dart';
 import 'ocr_test_screen.dart';
 import 'product_catalog_screen.dart';
+import 'receipt_parser_test_screen.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -58,6 +59,13 @@ class AdminScreen extends StatelessWidget {
             'OCR Test',
             'Test receipt text extraction',
             const OcrTestScreen(),
+          ),
+          _adminButton(
+            context,
+            Icons.receipt_long,
+            'Receipt Parser Test',
+            'Test extracting receipt items and prices',
+            const ReceiptParserTestScreen(),
           ),
         ],
       ),
