@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/theme/app_colors.dart';
 import '../models/receipt.dart';
 import '../models/store.dart';
+import '../service/receipt_processor_service.dart';
 import '../service/receipt_service.dart';
 import '../service/store_service.dart';
 import 'receipt_history_screen.dart';
@@ -29,6 +30,7 @@ class _ReceiptUploadScreenState extends State<ReceiptUploadScreen> {
 
   bool loadingStores = true;
   bool isSaving = false;
+  String? processingMessage;
 
   @override
   void initState() {
@@ -60,6 +62,7 @@ class _ReceiptUploadScreenState extends State<ReceiptUploadScreen> {
     setState(() {
       _receiptImage = image;
       _imageBytes = bytes;
+      processingMessage = null;
     });
   }
 
@@ -90,10 +93,11 @@ class _ReceiptUploadScreenState extends State<ReceiptUploadScreen> {
 
     setState(() {
       isSaving = true;
+      processingMessage = 'Saving receipt...';
     });
 
     try {
-      await ReceiptService.saveReceipt(
+      final savedReceipt = await ReceiptService.saveReceipt(
         Receipt(
           id: '',
           storeId: selectedStore!.id,
@@ -109,6 +113,9 @@ class _ReceiptUploadScreenState extends State<ReceiptUploadScreen> {
         ),
       );
 
+      final result =
+          await ReceiptProcessorService.processReceipt(savedReceipt);
+
       if (!mounted) return;
 
       setState(() {
@@ -117,11 +124,12 @@ class _ReceiptUploadScreenState extends State<ReceiptUploadScreen> {
         selectedStore = null;
         purchaseDate = DateTime.now();
         isSaving = false;
+        processingMessage = result.message;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Receipt record saved to Supabase.'),
+        SnackBar(
+          content: Text(result.message),
         ),
       );
     } catch (error) {
@@ -129,6 +137,7 @@ class _ReceiptUploadScreenState extends State<ReceiptUploadScreen> {
 
       setState(() {
         isSaving = false;
+        processingMessage = null;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -182,6 +191,22 @@ class _ReceiptUploadScreenState extends State<ReceiptUploadScreen> {
         height: 260,
         width: double.infinity,
         fit: BoxFit.cover,
+      ),
+    );
+  }
+
+  Widget processingCard() {
+    if (processingMessage == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          processingMessage!,
+          style: const TextStyle(fontSize: 16),
+        ),
       ),
     );
   }
@@ -266,13 +291,15 @@ class _ReceiptUploadScreenState extends State<ReceiptUploadScreen> {
                 preview(),
                 const SizedBox(height: 30),
                 ElevatedButton.icon(
-                  onPressed: isSaving ? null : () => pickImage(ImageSource.camera),
+                  onPressed:
+                      isSaving ? null : () => pickImage(ImageSource.camera),
                   icon: const Icon(Icons.photo_camera),
                   label: const Text('Take Photo'),
                 ),
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
-                  onPressed: isSaving ? null : () => pickImage(ImageSource.gallery),
+                  onPressed:
+                      isSaving ? null : () => pickImage(ImageSource.gallery),
                   icon: const Icon(Icons.photo_library),
                   label: const Text('Choose From Device'),
                 ),
@@ -288,6 +315,8 @@ class _ReceiptUploadScreenState extends State<ReceiptUploadScreen> {
                   icon: const Icon(Icons.cloud_upload),
                   label: Text(isSaving ? 'Saving...' : 'Upload Receipt'),
                 ),
+                const SizedBox(height: 16),
+                processingCard(),
                 const SizedBox(height: 40),
                 privacyNotice(),
               ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../models/receipt.dart';
+import 'receipt_items_screen.dart';
 
 class ReceiptDetailsScreen extends StatelessWidget {
   final Receipt receipt;
@@ -19,6 +20,15 @@ class ReceiptDetailsScreen extends StatelessWidget {
     final day = date.day.toString().padLeft(2, '0');
 
     return '$year-$month-$day';
+  }
+
+  void openReceiptItems(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReceiptItemsScreen(receipt: receipt),
+      ),
+    );
   }
 
   Widget infoCard({
@@ -143,14 +153,8 @@ class ReceiptDetailsScreen extends StatelessWidget {
               value: receipt.notes,
             ),
           const SizedBox(height: 20),
-          OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Receipt item review coming soon.'),
-                ),
-              );
-            },
+          FilledButton.icon(
+            onPressed: () => openReceiptItems(context),
             icon: const Icon(Icons.list_alt),
             label: const Text('View Receipt Items'),
           ),

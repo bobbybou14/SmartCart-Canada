@@ -28,6 +28,9 @@ dependencies:
   # Receipt Images
   image_picker: ^1.1.2
 
+  # On-device OCR
+  google_mlkit_text_recognition: ^0.15.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
