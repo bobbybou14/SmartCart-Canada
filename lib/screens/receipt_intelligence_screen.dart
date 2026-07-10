@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../models/store.dart';
 import '../service/receipt_intelligence_service.dart';
+import '../service/shopping_trip_builder_service.dart';
+import '../service/shopping_trip_service.dart';
+import '../service/store_service.dart';
 
 class ReceiptIntelligenceScreen extends StatefulWidget {
   const ReceiptIntelligenceScreen({super.key});
@@ -10,13 +14,60 @@ class ReceiptIntelligenceScreen extends StatefulWidget {
       _ReceiptIntelligenceScreenState();
 }
 
-class _ReceiptIntelligenceScreenState extends State<ReceiptIntelligenceScreen> {
+class _ReceiptIntelligenceScreenState
+    extends State<ReceiptIntelligenceScreen> {
   final TextEditingController textController = TextEditingController();
 
   ReceiptIntelligenceResult? result;
+
+  List<Store> stores = [];
+  Store? selectedStore;
+
   bool isLoading = false;
+  bool isSaving = false;
+  bool isLoadingStores = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadStores();
+  }
+
+  Future<void> loadStores() async {
+    try {
+      final loadedStores = await StoreService.getStores();
+
+      if (!mounted) return;
+
+      setState(() {
+        stores = loadedStores;
+        isLoadingStores = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoadingStores = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to load stores: $error'),
+        ),
+      );
+    }
+  }
 
   Future<void> processReceipt() async {
+    if (textController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter or load receipt text first.'),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       isLoading = true;
       result = null;
@@ -24,12 +75,29 @@ class _ReceiptIntelligenceScreenState extends State<ReceiptIntelligenceScreen> {
 
     try {
       final processed =
-          await ReceiptIntelligenceService.processRawText(textController.text);
+          await ReceiptIntelligenceService.processRawText(
+        textController.text.trim(),
+      );
 
       if (!mounted) return;
 
+      Store? detectedStore;
+
+      final detectedStoreName =
+          processed.parsedReceipt.storeName.trim().toLowerCase();
+
+      if (detectedStoreName.isNotEmpty) {
+        for (final store in stores) {
+          if (store.name.trim().toLowerCase() == detectedStoreName) {
+            detectedStore = store;
+            break;
+          }
+        }
+      }
+
       setState(() {
         result = processed;
+        selectedStore = detectedStore ?? selectedStore;
         isLoading = false;
       });
     } catch (error) {
@@ -40,12 +108,85 @@ class _ReceiptIntelligenceScreenState extends State<ReceiptIntelligenceScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Receipt processing failed: $error')),
+        SnackBar(
+          content: Text('Receipt processing failed: $error'),
+        ),
+      );
+    }
+  }
+
+  Future<void> saveShoppingTrip() async {
+    final intelligenceResult = result;
+    final store = selectedStore;
+
+    if (intelligenceResult == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Process a receipt before saving a shopping trip.'),
+        ),
+      );
+      return;
+    }
+
+    if (store == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select the store before saving.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      isSaving = true;
+    });
+
+    try {
+      final shoppingTrip =
+          ShoppingTripBuilderService.buildFromReceiptIntelligence(
+        intelligenceResult: intelligenceResult,
+        storeId: store.id,
+        storeName: store.name,
+        city: store.city,
+        province: store.province,
+      );
+
+      final savedTrip =
+          await ShoppingTripService.saveShoppingTrip(shoppingTrip);
+
+      if (!mounted) return;
+
+      setState(() {
+        isSaving = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Shopping trip saved with ${savedTrip.items.length} items.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        isSaving = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Shopping trip could not be saved: $error'),
+        ),
       );
     }
   }
 
   void loadSampleText() {
+    setState(() {
+      result = null;
+    });
+
     textController.text =
         'WALMART\n'
         '2026-07-09\n'
@@ -60,46 +201,240 @@ class _ReceiptIntelligenceScreenState extends State<ReceiptIntelligenceScreen> {
         'AUTH 123456';
   }
 
+  String formatDate(DateTime? date) {
+    if (date == null) return 'Not found';
+
+    final year = date.year.toString();
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+
+    return '$year-$month-$day';
+  }
+
+  Color confidenceColour(double score) {
+    if (score >= 75) return Colors.green;
+    if (score >= 55) return Colors.orange;
+
+    return Colors.red;
+  }
+
+  Widget storeSelector() {
+    if (isLoadingStores) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Loading stores...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (stores.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'No stores are available. Add a store through the Admin screen before saving a shopping trip.',
+          ),
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<Store>(
+      key: ValueKey(selectedStore?.id ?? 'no-store'),
+      initialValue: selectedStore,
+      decoration: const InputDecoration(
+        labelText: 'Store',
+        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.store),
+      ),
+      items: stores.map((store) {
+        final location = [
+          store.city,
+          store.province,
+        ].where((value) => value.trim().isNotEmpty).join(', ');
+
+        return DropdownMenuItem<Store>(
+          value: store,
+          child: Text(
+            location.isEmpty
+                ? store.name
+                : '${store.name} — $location',
+          ),
+        );
+      }).toList(),
+      onChanged: isSaving
+          ? null
+          : (store) {
+              setState(() {
+                selectedStore = store;
+              });
+            },
+    );
+  }
+
   Widget resultCard() {
     final data = result;
-    if (data == null) return const SizedBox.shrink();
+
+    if (data == null) {
+      return const SizedBox.shrink();
+    }
 
     final receipt = data.parsedReceipt;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Receipt Intelligence Result',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Text('Store: ${receipt.storeName.isEmpty ? "Not found" : receipt.storeName}'),
-            Text('Items found: ${receipt.items.length}'),
-            Text('High confidence matches: ${data.highConfidenceMatches}'),
-            Text('Review required: ${data.reviewRequired}'),
-            const SizedBox(height: 16),
-            ...data.productMatches.map(
-              (match) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(match.receiptItem.name),
-                subtitle: Text(
-                  match.product == null
-                      ? 'No product match found'
-                      : 'Matched: ${match.product!.brand} ${match.product!.name} ${match.product!.size}\n${match.reason}',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Receipt Intelligence Result',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                trailing: Text(
-                  '${match.confidenceScore.toStringAsFixed(0)}%',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                const SizedBox(height: 14),
+                Text(
+                  'Detected store: '
+                  '${receipt.storeName.isEmpty ? "Not found" : receipt.storeName}',
                 ),
-              ),
+                Text(
+                  'Purchase date: ${formatDate(receipt.purchaseDate)}',
+                ),
+                Text(
+                  'Subtotal: \$${receipt.subtotal.toStringAsFixed(2)}',
+                ),
+                Text(
+                  'Tax: \$${receipt.tax.toStringAsFixed(2)}',
+                ),
+                Text(
+                  'Total: \$${receipt.total.toStringAsFixed(2)}',
+                ),
+                const Divider(height: 28),
+                Text('Items found: ${receipt.items.length}'),
+                Text(
+                  'High-confidence matches: '
+                  '${data.highConfidenceMatches}',
+                ),
+                Text(
+                  'Review required: ${data.reviewRequired}',
+                ),
+                Text(
+                  'Sensitive lines ignored: '
+                  '${receipt.ignoredSensitiveLines.length}',
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 12),
+        storeSelector(),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Product Matches',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (data.productMatches.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text('No receipt items were found.'),
+                  )
+                else
+                  ...data.productMatches.map(
+                    (match) {
+                      final product = match.product;
+
+                      final matchedName = product == null
+                          ? 'No product match found'
+                          : [
+                              product.brand,
+                              product.name,
+                              product.size,
+                            ]
+                              .where(
+                                (value) => value.trim().isNotEmpty,
+                              )
+                              .join(' ');
+
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          product == null
+                              ? Icons.warning_amber
+                              : match.confidenceScore >= 75
+                                  ? Icons.check_circle
+                                  : Icons.help_outline,
+                          color: confidenceColour(
+                            match.confidenceScore,
+                          ),
+                        ),
+                        title: Text(match.receiptItem.name),
+                        subtitle: Text(
+                          '$matchedName\n'
+                          'Receipt price: '
+                          '\$${match.receiptItem.price.toStringAsFixed(2)}\n'
+                          '${match.reason}',
+                        ),
+                        isThreeLine: true,
+                        trailing: Text(
+                          '${match.confidenceScore.toStringAsFixed(0)}%',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: confidenceColour(
+                              match.confidenceScore,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: isSaving ? null : saveShoppingTrip,
+          icon: isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(Icons.save),
+          label: Text(
+            isSaving ? 'Saving Shopping Trip...' : 'Save Shopping Trip',
+          ),
+        ),
+      ],
     );
   }
 
@@ -120,11 +455,14 @@ class _ReceiptIntelligenceScreenState extends State<ReceiptIntelligenceScreen> {
         children: [
           const Text(
             'Receipt Intelligence',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 10),
           const Text(
-            'Paste raw receipt text and SmartCart will parse it, match products, and identify items that need review.',
+            'Paste raw receipt text and SmartCart will parse it, match products, identify items requiring review, and create a shopping trip.',
             style: TextStyle(fontSize: 18),
           ),
           const SizedBox(height: 20),
@@ -132,26 +470,37 @@ class _ReceiptIntelligenceScreenState extends State<ReceiptIntelligenceScreen> {
             controller: textController,
             minLines: 10,
             maxLines: 18,
+            enabled: !isLoading && !isSaving,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               labelText: 'Raw receipt text',
+              alignLabelWithHint: true,
             ),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: isLoading ? null : loadSampleText,
+            onPressed:
+                isLoading || isSaving ? null : loadSampleText,
             icon: const Icon(Icons.text_snippet),
             label: const Text('Load Sample Receipt Text'),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
-            onPressed: isLoading ? null : processReceipt,
+            onPressed:
+                isLoading || isSaving ? null : processReceipt,
             icon: const Icon(Icons.auto_awesome),
-            label: Text(isLoading ? 'Processing...' : 'Process Receipt'),
+            label: Text(
+              isLoading ? 'Processing...' : 'Process Receipt',
+            ),
           ),
           const SizedBox(height: 20),
           if (isLoading)
-            const Center(child: CircularProgressIndicator())
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(),
+              ),
+            )
           else
             resultCard(),
         ],
