@@ -5,7 +5,12 @@ import '../service/basket_comparison_service.dart';
 import '../service/product_service.dart';
 
 class BasketComparisonScreen extends StatefulWidget {
-  const BasketComparisonScreen({super.key});
+  final List<BasketItemRequest> initialItems;
+
+  const BasketComparisonScreen({
+    super.key,
+    this.initialItems = const [],
+  });
 
   @override
   State<BasketComparisonScreen> createState() =>
@@ -25,6 +30,11 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
   @override
   void initState() {
     super.initState();
+
+    for (final item in widget.initialItems) {
+      selectedQuantities[item.product.barcode] = item.quantity;
+    }
+
     loadProducts();
   }
 
@@ -36,6 +46,17 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
 
     try {
       final loadedProducts = await ProductService.getProducts();
+
+      for (final initialItem in widget.initialItems) {
+        final alreadyIncluded = loadedProducts.any(
+          (product) =>
+              product.barcode == initialItem.product.barcode,
+        );
+
+        if (!alreadyIncluded) {
+          loadedProducts.add(initialItem.product);
+        }
+      }
 
       if (!mounted) return;
 
@@ -61,7 +82,8 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
         .map(
           (product) => BasketItemRequest(
             product: product,
-            quantity: selectedQuantities[product.barcode] ?? 1,
+            quantity:
+                selectedQuantities[product.barcode] ?? 1,
           ),
         )
         .toList();
@@ -69,7 +91,9 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
     if (basketItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Select at least one product before comparing.'),
+          content: Text(
+            'Select at least one product before comparing.',
+          ),
         ),
       );
       return;
@@ -82,7 +106,8 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
     });
 
     try {
-      final result = await BasketComparisonService.compareBasket(
+      final result =
+          await BasketComparisonService.compareBasket(
         basketItems,
       );
 
@@ -104,7 +129,9 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
 
   void increaseQuantity(Product product) {
     setState(() {
-      final current = selectedQuantities[product.barcode] ?? 0;
+      final current =
+          selectedQuantities[product.barcode] ?? 0;
+
       selectedQuantities[product.barcode] = current + 1;
       comparisonResult = null;
     });
@@ -112,7 +139,8 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
 
   void decreaseQuantity(Product product) {
     setState(() {
-      final current = selectedQuantities[product.barcode] ?? 0;
+      final current =
+          selectedQuantities[product.barcode] ?? 0;
 
       if (current <= 1) {
         selectedQuantities.remove(product.barcode);
@@ -120,6 +148,13 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
         selectedQuantities[product.barcode] = current - 1;
       }
 
+      comparisonResult = null;
+    });
+  }
+
+  void clearBasket() {
+    setState(() {
+      selectedQuantities.clear();
       comparisonResult = null;
     });
   }
@@ -145,8 +180,65 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
     ].where((value) => value.trim().isNotEmpty).join(', ');
   }
 
+  int get selectedProductCount {
+    return selectedQuantities.values
+        .where((quantity) => quantity > 0)
+        .length;
+  }
+
+  double get selectedUnitCount {
+    return selectedQuantities.values.fold<double>(
+      0,
+      (total, quantity) => total + quantity,
+    );
+  }
+
+  Widget basketSummaryCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const CircleAvatar(
+              child: Icon(Icons.shopping_cart),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Current Basket',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$selectedProductCount product'
+                    '${selectedProductCount == 1 ? '' : 's'} • '
+                    '${selectedUnitCount.toStringAsFixed(0)} total item'
+                    '${selectedUnitCount == 1 ? '' : 's'}',
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: selectedQuantities.isEmpty
+                  ? null
+                  : clearBasket,
+              child: const Text('Clear'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget productCard(Product product) {
-    final quantity = selectedQuantities[product.barcode] ?? 0;
+    final quantity =
+        selectedQuantities[product.barcode] ?? 0;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -154,13 +246,18 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            const CircleAvatar(
-              child: Icon(Icons.inventory_2),
+            CircleAvatar(
+              child: Icon(
+                quantity > 0
+                    ? Icons.check
+                    : Icons.inventory_2,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
                     productDisplayName(product),
@@ -183,7 +280,8 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
               onPressed: quantity <= 0
                   ? null
                   : () => decreaseQuantity(product),
-              icon: const Icon(Icons.remove_circle_outline),
+              icon:
+                  const Icon(Icons.remove_circle_outline),
               tooltip: 'Decrease quantity',
             ),
             SizedBox(
@@ -219,7 +317,9 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
       child: ExpansionTile(
         leading: CircleAvatar(
           child: Icon(
-            isCheapest ? Icons.emoji_events : Icons.store,
+            isCheapest
+                ? Icons.emoji_events
+                : Icons.store,
           ),
         ),
         title: Text(
@@ -250,7 +350,8 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
             (item) => ListTile(
               title: Text(item.productName),
               subtitle: Text(
-                'Quantity: ${item.quantity.toStringAsFixed(0)}',
+                'Quantity: '
+                '${item.quantity.toStringAsFixed(0)}',
               ),
               trailing: item.hasPrice
                   ? Text(
@@ -273,7 +374,9 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
     );
   }
 
-  Widget comparisonSummary(BasketComparisonResult result) {
+  Widget comparisonSummary(
+    BasketComparisonResult result,
+  ) {
     final cheapest = result.cheapestCompleteStore;
 
     return Column(
@@ -293,7 +396,8 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
             child: Padding(
               padding: EdgeInsets.all(18),
               child: Text(
-                'No store currently has prices for every item in this basket.',
+                'No store currently has prices for every item '
+                'in this basket.',
                 textAlign: TextAlign.center,
               ),
             ),
@@ -303,7 +407,8 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
             child: Padding(
               padding: const EdgeInsets.all(18),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment:
+                    CrossAxisAlignment.stretch,
                 children: [
                   const Text(
                     'Cheapest Complete Basket',
@@ -344,8 +449,8 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
         ...result.stores.map(
           (store) => storeComparisonCard(
             store,
-            isCheapest:
-                cheapest != null && store.storeId == cheapest.storeId,
+            isCheapest: cheapest != null &&
+                store.storeId == cheapest.storeId,
           ),
         ),
       ],
@@ -399,10 +504,13 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Choose products and quantities, then compare the latest recorded prices across stores.',
+          'Choose products and quantities, then compare '
+          'the latest recorded prices across stores.',
           style: TextStyle(fontSize: 17),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+        basketSummaryCard(),
+        const SizedBox(height: 16),
         if (products.isEmpty)
           const Card(
             child: Padding(
@@ -428,10 +536,13 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
                 )
               : const Icon(Icons.compare_arrows),
           label: Text(
-            isComparing ? 'Comparing...' : 'Compare Basket',
+            isComparing
+                ? 'Comparing...'
+                : 'Compare Basket',
           ),
         ),
-        if (errorMessage != null && products.isNotEmpty) ...[
+        if (errorMessage != null &&
+            products.isNotEmpty) ...[
           const SizedBox(height: 12),
           Text(
             errorMessage!,
@@ -454,9 +565,10 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
         title: const Text('Basket Comparison'),
         actions: [
           IconButton(
-            onPressed: isLoadingProducts || isComparing
-                ? null
-                : loadProducts,
+            onPressed:
+                isLoadingProducts || isComparing
+                    ? null
+                    : loadProducts,
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh Products',
           ),
