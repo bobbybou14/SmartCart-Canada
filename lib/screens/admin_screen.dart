@@ -9,6 +9,7 @@ import 'product_catalog_screen.dart';
 import 'product_matcher_test_screen.dart';
 import 'receipt_intelligence_screen.dart';
 import 'receipt_parser_test_screen.dart';
+import 'shopping_trip_history_screen.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -93,6 +94,14 @@ class AdminScreen extends StatelessWidget {
             'Receipt Intelligence',
             'Run the complete receipt processing pipeline',
             const ReceiptIntelligenceScreen(),
+          ),
+
+          _adminButton(
+            context,
+            Icons.history,
+            'Shopping Trip History',
+            'View saved shopping trips',
+            const ShoppingTripHistoryScreen(),
           ),
         ],
       ),

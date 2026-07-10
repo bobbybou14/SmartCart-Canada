@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/store.dart';
+import '../service/price_update_service.dart';
 import '../service/receipt_intelligence_service.dart';
 import '../service/shopping_trip_builder_service.dart';
 import '../service/shopping_trip_service.dart';
@@ -122,7 +123,9 @@ class _ReceiptIntelligenceScreenState
     if (intelligenceResult == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Process a receipt before saving a shopping trip.'),
+          content: Text(
+            'Process a receipt before saving a shopping trip.',
+          ),
         ),
       );
       return;
@@ -154,19 +157,81 @@ class _ReceiptIntelligenceScreenState
       final savedTrip =
           await ShoppingTripService.saveShoppingTrip(shoppingTrip);
 
+      PriceUpdateResult? priceResult;
+      String? priceUpdateError;
+
+      try {
+        priceResult =
+            await PriceUpdateService.updatePricesFromShoppingTrip(
+          savedTrip,
+        );
+      } catch (error) {
+        priceUpdateError = error.toString();
+      }
+
       if (!mounted) return;
 
       setState(() {
         isSaving = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Shopping trip saved with ${savedTrip.items.length} items.',
-          ),
-        ),
+      if (priceUpdateError != null) {
+        await showDialog<void>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Shopping Trip Saved'),
+              content: Text(
+                'The shopping trip and ${savedTrip.items.length} items '
+                'were saved successfully.\n\n'
+                'The automatic price update could not be completed:\n\n'
+                '$priceUpdateError',
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Shopping Trip Saved'),
+            content: Text(
+              'Shopping trip created successfully.\n\n'
+              'Trip items saved: ${savedTrip.items.length}\n'
+              'Prices added: ${priceResult?.inserted ?? 0}\n'
+              'Items skipped: ${priceResult?.skipped ?? 0}',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
       );
+
+      if (!mounted) return;
+
+      setState(() {
+        result = null;
+        selectedStore = null;
+        textController.clear();
+      });
     } catch (error) {
       if (!mounted) return;
 
@@ -176,7 +241,9 @@ class _ReceiptIntelligenceScreenState
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Shopping trip could not be saved: $error'),
+          content: Text(
+            'Shopping trip could not be saved: $error',
+          ),
         ),
       );
     }
@@ -245,7 +312,8 @@ class _ReceiptIntelligenceScreenState
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Text(
-            'No stores are available. Add a store through the Admin screen before saving a shopping trip.',
+            'No stores are available. Add a store through the Admin '
+            'screen before saving a shopping trip.',
           ),
         ),
       );
@@ -431,7 +499,9 @@ class _ReceiptIntelligenceScreenState
                 )
               : const Icon(Icons.save),
           label: Text(
-            isSaving ? 'Saving Shopping Trip...' : 'Save Shopping Trip',
+            isSaving
+                ? 'Saving Shopping Trip...'
+                : 'Save Shopping Trip',
           ),
         ),
       ],
@@ -462,7 +532,9 @@ class _ReceiptIntelligenceScreenState
           ),
           const SizedBox(height: 10),
           const Text(
-            'Paste raw receipt text and SmartCart will parse it, match products, identify items requiring review, and create a shopping trip.',
+            'Paste raw receipt text and SmartCart will parse it, '
+            'match products, identify items requiring review, create '
+            'a shopping trip, and update verified prices.',
             style: TextStyle(fontSize: 18),
           ),
           const SizedBox(height: 20),

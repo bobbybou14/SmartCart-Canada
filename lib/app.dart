@@ -4,7 +4,7 @@ import 'core/theme/app_theme.dart';
 import 'models/cart_item.dart';
 import 'screens/admin_screen.dart';
 import 'screens/cart_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/dashboard_screen.dart';
 import 'screens/product_catalog_screen.dart';
 import 'screens/receipt_upload_screen.dart';
 import 'screens/scan_screen.dart';
@@ -39,49 +39,48 @@ class _SmartCartCanadaAppState extends State<SmartCartCanadaApp> {
   @override
   Widget build(BuildContext context) {
     final screens = [
-      HomeScreen(
-        cart: cart,
-        onScanTap: () {
-          setState(() {
-            selectedIndex = 1;
-          });
-        },
-        onCartTap: () {
-          setState(() {
-            selectedIndex = 3;
-          });
-        },
+      const DashboardScreen(),
+      ScanScreen(
+        onItemScanned: addToCart,
       ),
-      ScanScreen(onItemScanned: addToCart),
-      ProductCatalogScreen(onAddToCart: addToCart),
-      CartScreen(cart: cart),
+      ProductCatalogScreen(
+        onAddToCart: addToCart,
+      ),
+      CartScreen(
+        cart: cart,
+      ),
       const ReceiptUploadScreen(),
       const AdminScreen(),
     ];
 
     return MaterialApp(
-      title: 'SmartCart Canada',
       debugShowCheckedModeBanner: false,
+      title: 'SmartCart Canada',
       theme: AppTheme.lightTheme,
       home: Scaffold(
         body: screens[selectedIndex],
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: selectedIndex,
           type: BottomNavigationBarType.fixed,
+          selectedItemColor: Colors.red,
+          unselectedItemColor: Colors.grey,
           onTap: (index) {
             setState(() {
               selectedIndex = index;
             });
           },
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard),
+              label: 'Home',
+            ),
             BottomNavigationBarItem(
               icon: Icon(Icons.qr_code_scanner),
               label: 'Scan',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.list_alt),
-              label: 'Browse',
+              icon: Icon(Icons.inventory_2),
+              label: 'Products',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.shopping_cart),

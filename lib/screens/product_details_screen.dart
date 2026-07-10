@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../models/cart_item.dart';
-import '../models/product.dart';
 import '../models/price.dart';
+import '../models/product.dart';
 import '../service/price_service.dart';
 import 'add_price_screen.dart';
+import 'price_history_screen.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
@@ -24,6 +25,7 @@ class ProductDetailsScreen extends StatefulWidget {
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   List<Price> prices = [];
   bool loading = true;
+  String? errorMessage;
 
   @override
   void initState() {
@@ -32,31 +34,61 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   Future<void> loadPrices() async {
-    final results = await PriceService.getPricesForProduct(widget.product.barcode);
-
-    if (!mounted) return;
-
     setState(() {
-      prices = results;
-      loading = false;
+      loading = true;
+      errorMessage = null;
     });
+
+    try {
+      final results =
+          await PriceService.getPricesForProduct(widget.product.barcode);
+
+      if (!mounted) return;
+
+      setState(() {
+        prices = results;
+        loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        loading = false;
+        errorMessage = 'Unable to load prices: $error';
+      });
+    }
   }
 
   double get averagePrice {
     if (prices.isEmpty) return 0;
-    final total = prices.fold<double>(0, (sum, price) => sum + price.price);
+
+    final total = prices.fold<double>(
+      0,
+      (sum, price) => sum + price.price,
+    );
+
     return total / prices.length;
   }
 
-  double get lowestPrice => prices.isEmpty ? 0 : prices.first.price;
+  double get lowestPrice {
+    if (prices.isEmpty) return 0;
+
+    return prices
+        .map((price) => price.price)
+        .reduce((a, b) => a < b ? a : b);
+  }
 
   double get highestPrice {
     if (prices.isEmpty) return 0;
-    return prices.map((p) => p.price).reduce((a, b) => a > b ? a : b);
+
+    return prices
+        .map((price) => price.price)
+        .reduce((a, b) => a > b ? a : b);
   }
 
   double get potentialSavings {
     if (prices.length < 2) return 0;
+
     return highestPrice - lowestPrice;
   }
 
@@ -64,20 +96,45 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     final saved = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => AddPriceScreen(product: widget.product),
+        builder: (_) => AddPriceScreen(
+          product: widget.product,
+        ),
       ),
     );
 
     if (saved == true) {
-      setState(() {
-        loading = true;
-      });
       await loadPrices();
     }
   }
 
+  Future<void> openPriceHistoryScreen() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PriceHistoryScreen(
+          product: widget.product,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    await loadPrices();
+  }
+
   void addToCart() {
     if (widget.onAddToCart == null) return;
+
+    if (prices.isEmpty || lowestPrice <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'A valid price is required before adding this product to the cart.',
+          ),
+        ),
+      );
+      return;
+    }
 
     final item = CartItem(
       product: widget.product,
@@ -87,7 +144,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     widget.onAddToCart!(item);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${widget.product.name} added to cart')),
+      SnackBar(
+        content: Text(
+          '${widget.product.name} added to cart.',
+        ),
+      ),
     );
   }
 
@@ -104,7 +165,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       widget.product.imageUrl,
       height: 160,
       fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) {
+      errorBuilder: (_, _, _) {
         return const Icon(
           Icons.shopping_bag,
           size: 110,
@@ -115,6 +176,45 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   Widget priceSummaryCard() {
+    if (loading) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    if (errorMessage != null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 42,
+                color: AppColors.primary,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                errorMessage!,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: loadPrices,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (prices.isEmpty) {
       return const Card(
         child: Padding(
@@ -127,7 +227,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       );
     }
 
-    final bestPrice = prices.first;
+    final bestPrice = prices.reduce(
+      (current, next) =>
+          next.price < current.price ? next : current,
+    );
 
     return Card(
       color: AppColors.surface,
@@ -137,12 +240,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              '🥇 Best Price',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              'Best Price',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
-              bestPrice.store.isEmpty ? 'Unknown Store' : bestPrice.store,
+              bestPrice.store.isEmpty
+                  ? 'Unknown Store'
+                  : bestPrice.store,
               style: const TextStyle(fontSize: 20),
             ),
             Text(
@@ -159,7 +267,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             _summaryRow('Potential Savings', potentialSavings),
             const SizedBox(height: 6),
             Text(
-              '${prices.length} store${prices.length == 1 ? '' : 's'} compared',
+              '${prices.length} price record'
+              '${prices.length == 1 ? '' : 's'} compared',
               style: const TextStyle(fontSize: 16),
             ),
           ],
@@ -174,37 +283,59 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 17)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 17),
+          ),
           Text(
             '\$${amount.toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget priceCard(Price price, int index) {
-    final isCheapest = index == 0;
+  Widget priceCard(Price price) {
+    final isCheapest =
+        prices.isNotEmpty && price.price == lowestPrice;
+
+    final location = [
+      price.city,
+      price.province,
+    ].where((value) => value.trim().isNotEmpty).join(', ');
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: ListTile(
         leading: Icon(
           isCheapest ? Icons.emoji_events : Icons.store,
-          color: isCheapest ? AppColors.warning : AppColors.primary,
+          color: isCheapest
+              ? AppColors.warning
+              : AppColors.primary,
         ),
         title: Text(
-          price.store.isEmpty ? 'Unknown Store' : price.store,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          price.store.isEmpty
+              ? 'Unknown Store'
+              : price.store,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        subtitle: Text('${price.city}, ${price.province}'),
+        subtitle: location.isEmpty
+            ? null
+            : Text(location),
         trailing: Text(
           '\$${price.price.toStringAsFixed(2)}',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: isCheapest ? AppColors.success : AppColors.textPrimary,
+            color: isCheapest
+                ? AppColors.success
+                : AppColors.textPrimary,
           ),
         ),
       ),
@@ -230,7 +361,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             Text(
               product.name,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             if (product.brand.isNotEmpty)
               Text(
@@ -246,7 +380,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ),
             const SizedBox(height: 10),
             Text(
-              product.taxable ? 'Ontario HST Applies' : 'No HST',
+              product.taxable
+                  ? 'Ontario HST Applies'
+                  : 'No HST',
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 18),
             ),
@@ -264,6 +400,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
+                onPressed: openPriceHistoryScreen,
+                icon: const Icon(Icons.show_chart),
+                label: const Text('View Price History'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
                 onPressed: openAddPriceScreen,
                 icon: const Icon(Icons.add),
                 label: const Text('Add Price'),
@@ -274,20 +419,21 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             const SizedBox(height: 25),
             const Text(
               'Current Prices',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 10),
-            if (loading)
-              const Center(child: CircularProgressIndicator())
-            else if (prices.isEmpty)
+            if (!loading &&
+                errorMessage == null &&
+                prices.isEmpty)
               const Text(
                 'No prices found yet.',
                 style: TextStyle(fontSize: 18),
               )
-            else
-              ...prices.asMap().entries.map(
-                    (entry) => priceCard(entry.value, entry.key),
-                  ),
+            else if (!loading && errorMessage == null)
+              ...prices.map(priceCard),
             const SizedBox(height: 80),
           ],
         ),
