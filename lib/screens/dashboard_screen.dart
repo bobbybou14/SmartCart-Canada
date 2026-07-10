@@ -7,6 +7,7 @@ import '../widgets/dashboard/quick_action_card.dart';
 import '../widgets/dashboard/recent_trip_card.dart';
 import '../widgets/dashboard/savings_card.dart';
 import '../widgets/dashboard/stat_card.dart';
+import 'basket_comparison_screen.dart';
 import 'product_catalog_screen.dart';
 import 'receipt_upload_screen.dart';
 import 'shopping_trip_history_screen.dart';
@@ -306,6 +307,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             subtitle: 'Search products, compare prices, and view history',
             onTap: () {
               openScreen(const ProductCatalogScreen());
+            },
+          ),
+          QuickActionCard(
+            icon: Icons.shopping_basket,
+            title: 'Compare Basket',
+            subtitle: 'Find the cheapest store for your grocery basket',
+            onTap: () {
+              openScreen(const BasketComparisonScreen());
             },
           ),
           const SizedBox(height: 22),
