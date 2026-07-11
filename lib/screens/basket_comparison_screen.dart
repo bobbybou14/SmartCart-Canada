@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../service/basket_comparison_service.dart';
 import '../service/product_service.dart';
+import '../widgets/store_comparison_card.dart';
 
 class BasketComparisonScreen extends StatefulWidget {
   final List<BasketItemRequest> initialItems;
@@ -58,6 +59,12 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
         }
       }
 
+      loadedProducts.sort(
+        (a, b) => productDisplayName(a).compareTo(
+          productDisplayName(b),
+        ),
+      );
+
       if (!mounted) return;
 
       setState(() {
@@ -76,9 +83,10 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
 
   Future<void> compareBasket() async {
     final basketItems = products
-        .where((product) {
-          return (selectedQuantities[product.barcode] ?? 0) > 0;
-        })
+        .where(
+          (product) =>
+              (selectedQuantities[product.barcode] ?? 0) > 0,
+        )
         .map(
           (product) => BasketItemRequest(
             product: product,
@@ -171,13 +179,6 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
     }
 
     return parts.join(' ');
-  }
-
-  String storeLocation(BasketStoreComparison store) {
-    return [
-      store.city,
-      store.province,
-    ].where((value) => value.trim().isNotEmpty).join(', ');
   }
 
   int get selectedProductCount {
@@ -275,13 +276,14 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             IconButton(
               onPressed: quantity <= 0
                   ? null
                   : () => decreaseQuantity(product),
-              icon:
-                  const Icon(Icons.remove_circle_outline),
+              icon: const Icon(
+                Icons.remove_circle_outline,
+              ),
               tooltip: 'Decrease quantity',
             ),
             SizedBox(
@@ -297,7 +299,9 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
             ),
             IconButton(
               onPressed: () => increaseQuantity(product),
-              icon: const Icon(Icons.add_circle_outline),
+              icon: const Icon(
+                Icons.add_circle_outline,
+              ),
               tooltip: 'Increase quantity',
             ),
           ],
@@ -306,70 +310,93 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
     );
   }
 
-  Widget storeComparisonCard(
-    BasketStoreComparison store, {
-    required bool isCheapest,
-  }) {
-    final location = storeLocation(store);
+  Widget cheapestBasketSummary(
+    BasketComparisonResult result,
+  ) {
+    final cheapest = result.cheapestCompleteStore;
+
+    if (cheapest == null) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Icon(
+                Icons.warning_amber,
+                size: 46,
+                color: Colors.orange,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'No Complete Basket Available',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'No store currently has recorded prices for every item in this basket. Partial totals are shown below but are not eligible for cheapest-basket ranking.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: ExpansionTile(
-        leading: CircleAvatar(
-          child: Icon(
-            isCheapest
-                ? Icons.emoji_events
-                : Icons.store,
-          ),
-        ),
-        title: Text(
-          store.storeName,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Text(
-          '${location.isEmpty ? "" : "$location\n"}'
-          '${store.pricedItems} priced, '
-          '${store.missingItems} missing',
-        ),
-        trailing: Text(
-          store.total <= 0
-              ? 'No total'
-              : '\$${store.total.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: isCheapest ? Colors.green : null,
-          ),
-        ),
-        children: [
-          const Divider(height: 1),
-          ...store.items.map(
-            (item) => ListTile(
-              title: Text(item.productName),
-              subtitle: Text(
-                'Quantity: '
-                '${item.quantity.toStringAsFixed(0)}',
-              ),
-              trailing: item.hasPrice
-                  ? Text(
-                      '\$${item.lineTotal!.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : const Text(
-                      'Missing',
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontWeight: FontWeight.bold,
-                      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Row(
+              children: [
+                Icon(
+                  Icons.emoji_events,
+                  size: 32,
+                  color: Colors.green,
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Cheapest Complete Basket',
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              cheapest.storeName,
+              style: const TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '\$${cheapest.total.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 34,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              result.potentialSavings > 0
+                  ? 'Potential savings compared with the highest complete basket: '
+                      '\$${result.potentialSavings.toStringAsFixed(2)}'
+                  : 'Add more complete store price data to calculate potential savings.',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -382,7 +409,7 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 24),
+        const SizedBox(height: 26),
         const Text(
           'Comparison Results',
           style: TextStyle(
@@ -391,105 +418,90 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        if (cheapest == null)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(18),
-              child: Text(
-                'No store currently has prices for every item '
-                'in this basket.',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          )
-        else
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Cheapest Complete Basket',
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    cheapest.storeName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '\$${cheapest.total.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    result.potentialSavings > 0
-                        ? 'Potential savings: '
-                            '\$${result.potentialSavings.toStringAsFixed(2)}'
-                        : 'Add more store price data to calculate savings.',
-                  ),
-                ],
-              ),
-            ),
-          ),
-        const SizedBox(height: 12),
+        cheapestBasketSummary(result),
+        const SizedBox(height: 14),
         ...result.stores.map(
-          (store) => storeComparisonCard(
-            store,
+          (store) => StoreComparisonCard(
+            store: store,
             isCheapest: cheapest != null &&
                 store.storeId == cheapest.storeId,
+            potentialSavings: result.potentialSavings,
           ),
         ),
       ],
     );
   }
 
+  Widget loadingState() {
+    return const Center(
+      child: CircularProgressIndicator(),
+    );
+  }
+
+  Widget fullPageErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 60,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              errorMessage!,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: loadProducts,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try Again'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget emptyProductsState() {
+    return const Card(
+      child: Padding(
+        padding: EdgeInsets.all(22),
+        child: Column(
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 56,
+            ),
+            SizedBox(height: 14),
+            Text(
+              'No Products Available',
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Add products to SmartCart before building a basket comparison.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget bodyContent() {
     if (isLoadingProducts) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return loadingState();
     }
 
     if (errorMessage != null && products.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 60,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                errorMessage!,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: loadProducts,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try Again'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return fullPageErrorState();
     }
 
     return ListView(
@@ -504,50 +516,60 @@ class _BasketComparisonScreenState extends State<BasketComparisonScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Choose products and quantities, then compare '
-          'the latest recorded prices across stores.',
+          'Choose products and quantities, then compare the latest recorded prices across stores.',
           style: TextStyle(fontSize: 17),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         basketSummaryCard(),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         if (products.isEmpty)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                'No products are available yet.',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          )
+          emptyProductsState()
         else
           ...products.map(productCard),
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: isComparing ? null : compareBasket,
-          icon: isComparing
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Icon(Icons.compare_arrows),
-          label: Text(
-            isComparing
-                ? 'Comparing...'
-                : 'Compare Basket',
+        const SizedBox(height: 18),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: isComparing ? null : compareBasket,
+            icon: isComparing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.compare_arrows),
+            label: Text(
+              isComparing
+                  ? 'Comparing...'
+                  : 'Compare Basket',
+            ),
           ),
         ),
         if (errorMessage != null &&
             products.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            errorMessage!,
-            style: const TextStyle(
-              color: Colors.red,
+          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      errorMessage!,
+                      style: const TextStyle(
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
