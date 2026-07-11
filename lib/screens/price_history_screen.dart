@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
+import '../models/price_history.dart';
 import '../models/product.dart';
 import '../service/price_history_service.dart';
+import '../widgets/price/price_history_chart.dart';
+import '../widgets/price/price_history_list.dart';
+import '../widgets/price/price_statistics_card.dart';
 
 class PriceHistoryScreen extends StatefulWidget {
   final Product product;
@@ -12,11 +17,14 @@ class PriceHistoryScreen extends StatefulWidget {
   });
 
   @override
-  State<PriceHistoryScreen> createState() => _PriceHistoryScreenState();
+  State<PriceHistoryScreen> createState() =>
+      _PriceHistoryScreenState();
 }
 
-class _PriceHistoryScreenState extends State<PriceHistoryScreen> {
+class _PriceHistoryScreenState
+    extends State<PriceHistoryScreen> {
   PriceHistorySummary? summary;
+
   bool isLoading = true;
   String? errorMessage;
 
@@ -33,7 +41,8 @@ class _PriceHistoryScreenState extends State<PriceHistoryScreen> {
     });
 
     try {
-      final result = await PriceHistoryService.getPriceHistory(
+      final result =
+          await PriceHistoryService.getPriceHistory(
         widget.product.barcode,
       );
 
@@ -48,12 +57,13 @@ class _PriceHistoryScreenState extends State<PriceHistoryScreen> {
 
       setState(() {
         isLoading = false;
-        errorMessage = 'Unable to load price history: $error';
+        errorMessage =
+            'Unable to load price history: $error';
       });
     }
   }
 
-  String productDisplayName() {
+  String get productDisplayName {
     final parts = [
       widget.product.brand,
       widget.product.name,
@@ -67,67 +77,78 @@ class _PriceHistoryScreenState extends State<PriceHistoryScreen> {
     return parts.join(' ');
   }
 
-  String formatDate(DateTime date) {
-    final year = date.year.toString();
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-
-    return '$year-$month-$day';
-  }
-
-  IconData trendIcon(String trend) {
-    switch (trend.toLowerCase()) {
-      case 'rising':
-        return Icons.trending_up;
-      case 'falling':
-        return Icons.trending_down;
-      case 'stable':
-        return Icons.trending_flat;
-      default:
-        return Icons.show_chart;
-    }
-  }
-
-  Color trendColour(String trend) {
-    switch (trend.toLowerCase()) {
-      case 'rising':
-        return Colors.red;
-      case 'falling':
-        return Colors.green;
-      case 'stable':
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Widget statisticCard({
-    required String label,
-    required String value,
-    required IconData icon,
-  }) {
+  Widget productHeader() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              size: 30,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.bold,
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(
+                  alpha: 0.10,
+                ),
+                borderRadius: BorderRadius.circular(18),
               ),
+              child: widget.product.imageUrl.trim().isEmpty
+                  ? const Icon(
+                      Icons.inventory_2,
+                      size: 34,
+                      color: AppColors.primary,
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Image.network(
+                        widget.product.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) {
+                          return const Icon(
+                            Icons.inventory_2,
+                            size: 34,
+                            color: AppColors.primary,
+                          );
+                        },
+                      ),
+                    ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    productDisplayName,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Barcode: ${widget.product.barcode}',
+                  ),
+                  if (widget.product.category
+                      .trim()
+                      .isNotEmpty)
+                    Text(
+                      'Category: '
+                      '${widget.product.category}',
+                    ),
+                  const SizedBox(height: 6),
+                  Text(
+                    widget.product.taxable
+                        ? 'Ontario HST applies'
+                        : 'No HST',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -135,234 +156,110 @@ class _PriceHistoryScreenState extends State<PriceHistoryScreen> {
     );
   }
 
-  Widget summarySection(PriceHistorySummary data) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  productDisplayName(),
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Barcode: ${widget.product.barcode}',
-                ),
-                if (widget.product.category.trim().isNotEmpty)
-                  Text(
-                    'Category: ${widget.product.category}',
-                  ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.35,
-          children: [
-            statisticCard(
-              label: 'Current Price',
-              value: '\$${data.currentPrice.toStringAsFixed(2)}',
-              icon: Icons.attach_money,
-            ),
-            statisticCard(
-              label: 'Average Price',
-              value: '\$${data.averagePrice.toStringAsFixed(2)}',
-              icon: Icons.calculate,
-            ),
-            statisticCard(
-              label: 'Lowest Price',
-              value: '\$${data.lowestPrice.toStringAsFixed(2)}',
-              icon: Icons.arrow_downward,
-            ),
-            statisticCard(
-              label: 'Highest Price',
-              value: '\$${data.highestPrice.toStringAsFixed(2)}',
-              icon: Icons.arrow_upward,
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Card(
-          child: ListTile(
-            leading: Icon(
-              trendIcon(data.trend),
-              color: trendColour(data.trend),
-              size: 34,
-            ),
-            title: const Text(
-              'Price Trend',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            subtitle: Text(data.trend),
-          ),
-        ),
-        Card(
-          child: ListTile(
-            leading: const Icon(
-              Icons.store,
-              size: 34,
-            ),
-            title: const Text(
-              'Best Recorded Store',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            subtitle: Text(data.bestStore),
-          ),
-        ),
-      ],
+  Widget loadingState() {
+    return const Center(
+      child: CircularProgressIndicator(),
     );
   }
 
-  Widget historySection(PriceHistorySummary data) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 22),
-        const Text(
-          'Price History',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 10),
-        if (data.entries.isEmpty)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                'No price history is available for this product yet.',
-                textAlign: TextAlign.center,
+  Widget errorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: AppColors.primary,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Price History Could Not Be Loaded',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          )
-        else
-          ...data.entries.reversed.map(
-            (entry) {
-              final location = [
-                entry.city,
-                entry.province,
-              ].where((value) => value.trim().isNotEmpty).join(', ');
+            const SizedBox(height: 10),
+            Text(
+              errorMessage ?? 'An unknown error occurred.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: loadPriceHistory,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try Again'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.price_check),
-                  ),
-                  title: Text(
-                    entry.store.trim().isEmpty
-                        ? 'Unknown Store'
-                        : entry.store,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    '${formatDate(entry.createdAt)}'
-                    '${location.isEmpty ? "" : "\n$location"}'
-                    '${entry.source.trim().isEmpty ? "" : "\nSource: ${entry.source}"}',
-                  ),
-                  isThreeLine: true,
-                  trailing: Text(
-                    '\$${entry.price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              );
-            },
+  Widget priceHistoryContent(
+    PriceHistorySummary data,
+  ) {
+    return RefreshIndicator(
+      onRefresh: loadPriceHistory,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          productHeader(),
+          const SizedBox(height: 16),
+          PriceStatisticsCard(
+            summary: data,
           ),
-      ],
+          const SizedBox(height: 16),
+          PriceHistoryChart(
+            entries: data.entries,
+          ),
+          const SizedBox(height: 22),
+          PriceHistoryList(
+            entries: data.entries,
+          ),
+          const SizedBox(height: 30),
+        ],
+      ),
     );
   }
 
   Widget bodyContent() {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return loadingState();
     }
 
     if (errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 60,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                errorMessage!,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: loadPriceHistory,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try Again'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return errorState();
     }
 
     final data = summary;
 
     if (data == null) {
       return const Center(
-        child: Text('No price history was found.'),
+        child: Text(
+          'No price history information was found.',
+        ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: loadPriceHistory,
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          summarySection(data),
-          historySection(data),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
+    return priceHistoryContent(data);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Price History'),
+        title: const Text('Price Intelligence'),
         actions: [
           IconButton(
-            onPressed: isLoading ? null : loadPriceHistory,
+            onPressed:
+                isLoading ? null : loadPriceHistory,
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: 'Refresh Price History',
           ),
         ],
       ),
