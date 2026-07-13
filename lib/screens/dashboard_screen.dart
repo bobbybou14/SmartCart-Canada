@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../models/shopping_trip.dart';
 import '../service/shopping_trip_service.dart';
-import '../widgets/dashboard/hero_card.dart';
+import '../widgets/dashboard/best_store_card.dart';
+import '../widgets/dashboard/price_alerts_card.dart';
 import '../widgets/dashboard/quick_action_card.dart';
 import '../widgets/dashboard/recent_trip_card.dart';
-import '../widgets/dashboard/savings_card.dart';
-import '../widgets/dashboard/stat_card.dart';
+import '../widgets/dashboard/stats_grid.dart';
+import '../widgets/dashboard/summary_card.dart';
 import 'basket_comparison_screen.dart';
 import 'product_catalog_screen.dart';
 import 'receipt_upload_screen.dart';
@@ -21,6 +22,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   List<ShoppingTrip> trips = [];
+
   bool isLoading = true;
   String? errorMessage;
 
@@ -37,7 +39,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
-      final loadedTrips = await ShoppingTripService.getShoppingTrips();
+      final loadedTrips =
+          await ShoppingTripService.getShoppingTrips();
 
       if (!mounted) return;
 
@@ -50,7 +53,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       setState(() {
         isLoading = false;
-        errorMessage = 'Unable to load dashboard information: $error';
+        errorMessage =
+            'Unable to load dashboard information: $error';
       });
     }
   }
@@ -68,49 +72,116 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await loadDashboard();
   }
 
-  int get tripsThisMonth {
+  List<ShoppingTrip> get tripsThisMonth {
     final now = DateTime.now();
 
     return trips.where((trip) {
       return trip.purchaseDate.year == now.year &&
           trip.purchaseDate.month == now.month;
-    }).length;
+    }).toList();
+  }
+
+  int get tripCountThisMonth {
+    return tripsThisMonth.length;
   }
 
   double get spentThisMonth {
-    final now = DateTime.now();
-
-    return trips.where((trip) {
-      return trip.purchaseDate.year == now.year &&
-          trip.purchaseDate.month == now.month;
-    }).fold<double>(
+    return tripsThisMonth.fold<double>(
       0,
       (total, trip) => total + trip.total,
     );
   }
 
-  int get storesVisited {
-    final now = DateTime.now();
+  double get averageTripCost {
+    if (tripsThisMonth.isEmpty) {
+      return 0;
+    }
 
-    return trips
-        .where((trip) {
-          return trip.purchaseDate.year == now.year &&
-              trip.purchaseDate.month == now.month;
-        })
+    return spentThisMonth / tripsThisMonth.length;
+  }
+
+  int get storesVisited {
+    return tripsThisMonth
         .map((trip) {
-          return trip.storeId.isEmpty
-              ? trip.storeName.trim().toLowerCase()
-              : trip.storeId;
+          if (trip.storeId.trim().isNotEmpty) {
+            return trip.storeId.trim();
+          }
+
+          return trip.storeName.trim().toLowerCase();
         })
-        .where((value) => value.trim().isNotEmpty)
+        .where((value) => value.isNotEmpty)
         .toSet()
         .length;
   }
 
+  String get mostVisitedStoreName {
+    if (tripsThisMonth.isEmpty) {
+      return 'No Store Data';
+    }
+
+    final counts = <String, int>{};
+    final displayNames = <String, String>{};
+
+    for (final trip in tripsThisMonth) {
+      final storeName = trip.storeName.trim().isEmpty
+          ? 'Unknown Store'
+          : trip.storeName.trim();
+
+      final key = storeName.toLowerCase();
+
+      counts[key] = (counts[key] ?? 0) + 1;
+      displayNames[key] = storeName;
+    }
+
+    String? bestKey;
+    int highestCount = 0;
+
+    counts.forEach((key, count) {
+      if (count > highestCount) {
+        highestCount = count;
+        bestKey = key;
+      }
+    });
+
+    if (bestKey == null) {
+      return 'No Store Data';
+    }
+
+    return displayNames[bestKey] ?? 'Unknown Store';
+  }
+
+  int get mostVisitedStoreTrips {
+    if (tripsThisMonth.isEmpty) {
+      return 0;
+    }
+
+    final targetStore =
+        mostVisitedStoreName.trim().toLowerCase();
+
+    return tripsThisMonth.where((trip) {
+      final storeName = trip.storeName.trim().isEmpty
+          ? 'unknown store'
+          : trip.storeName.trim().toLowerCase();
+
+      return storeName == targetStore;
+    }).length;
+  }
+
   String formatDate(DateTime date) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final tripDate = DateTime(date.year, date.month, date.day);
+
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final tripDate = DateTime(
+      date.year,
+      date.month,
+      date.day,
+    );
+
     final difference = today.difference(tripDate).inDays;
 
     if (difference == 0) {
@@ -138,7 +209,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget sectionHeading(String title) {
     return Padding(
       padding: const EdgeInsets.only(
-        top: 8,
+        top: 6,
         bottom: 10,
       ),
       child: Text(
@@ -169,14 +240,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             const Icon(
               Icons.error_outline,
-              size: 60,
+              size: 64,
             ),
             const SizedBox(height: 16),
+            const Text(
+              'Dashboard Could Not Be Loaded',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
             Text(
-              errorMessage!,
+              errorMessage ?? 'An unknown error occurred.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             FilledButton.icon(
               onPressed: loadDashboard,
               icon: const Icon(Icons.refresh),
@@ -199,26 +279,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             const Icon(
               Icons.shopping_bag_outlined,
-              size: 54,
+              size: 56,
             ),
             const SizedBox(height: 14),
             const Text(
-              'No shopping trips yet',
+              'No Shopping Trips Yet',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 21,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Upload a receipt to begin building your shopping history and price database.',
+              'Upload a receipt to begin building your shopping history and grocery price database.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 18),
             FilledButton.icon(
               onPressed: () {
-                openScreen(const ReceiptUploadScreen());
+                openScreen(
+                  const ReceiptUploadScreen(),
+                );
               },
               icon: const Icon(Icons.receipt_long),
               label: const Text('Upload Receipt'),
@@ -226,6 +308,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget quickActionsSection() {
+    return Column(
+      children: [
+        QuickActionCard(
+          icon: Icons.receipt_long,
+          title: 'Upload Receipt',
+          subtitle:
+              'Turn a grocery receipt into shopping history and prices',
+          onTap: () {
+            openScreen(
+              const ReceiptUploadScreen(),
+            );
+          },
+        ),
+        QuickActionCard(
+          icon: Icons.history,
+          title: 'Shopping Trips',
+          subtitle:
+              'Review saved grocery trips and receipt items',
+          onTap: () {
+            openScreen(
+              const ShoppingTripHistoryScreen(),
+            );
+          },
+        ),
+        QuickActionCard(
+          icon: Icons.inventory_2,
+          title: 'Browse Products',
+          subtitle:
+              'Search products, compare prices, and view history',
+          onTap: () {
+            openScreen(
+              const ProductCatalogScreen(),
+            );
+          },
+        ),
+        QuickActionCard(
+          icon: Icons.shopping_basket,
+          title: 'Compare Basket',
+          subtitle:
+              'Find the cheapest store for your grocery basket',
+          onTap: () {
+            openScreen(
+              const BasketComparisonScreen(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget recentShoppingSection() {
+    final recentTrips = trips.take(3).toList();
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Recent Shopping',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                openScreen(
+                  const ShoppingTripHistoryScreen(),
+                );
+              },
+              child: const Text('View All'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (recentTrips.isEmpty)
+          emptyRecentTrips()
+        else
+          ...recentTrips.map(
+            (trip) => RecentTripCard(
+              store: trip.storeName,
+              date: formatDate(trip.purchaseDate),
+              total: trip.total,
+              location: tripLocation(trip),
+              onTap: () {
+                openScreen(
+                  const ShoppingTripHistoryScreen(),
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 
@@ -238,159 +418,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return errorState();
     }
 
-    final recentTrips = trips.take(3).toList();
-
     return RefreshIndicator(
       onRefresh: loadDashboard,
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          HeroCard(
-            userName: 'RJ',
-            tripCount: tripsThisMonth,
+          SummaryCard(
+            amountSpent: spentThisMonth,
+            tripCount: tripCountThisMonth,
+            storeCount: storesVisited,
+          ),
+          const SizedBox(height: 24),
+          sectionHeading('This Month'),
+          StatsGrid(
+            tripCount: tripCountThisMonth,
             storeCount: storesVisited,
             amountSpent: spentThisMonth,
+            averageTripCost: averageTripCost,
           ),
-          const SizedBox(height: 22),
-          sectionHeading('This Month'),
-          GridView.count(
-            crossAxisCount: 3,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 0.95,
-            children: [
-              StatCard(
-                icon: Icons.shopping_bag,
-                label: 'Shopping Trips',
-                value: tripsThisMonth.toString(),
-                supportingText: 'This month',
-              ),
-              StatCard(
-                icon: Icons.attach_money,
-                label: 'Amount Spent',
-                value: '\$${spentThisMonth.toStringAsFixed(2)}',
-                supportingText: 'Groceries',
-              ),
-              StatCard(
-                icon: Icons.store,
-                label: 'Stores Visited',
-                value: storesVisited.toString(),
-                supportingText: 'This month',
-              ),
-            ],
+          const SizedBox(height: 24),
+          sectionHeading('Shopping Insights'),
+          BestStoreCard(
+            storeName: mostVisitedStoreName,
+            averageSavings: 0,
+            trips: mostVisitedStoreTrips,
           ),
-          const SizedBox(height: 22),
-          const SavingsCard(),
-          const SizedBox(height: 22),
+          const SizedBox(height: 14),
+          const PriceAlertsCard(),
+          const SizedBox(height: 24),
           sectionHeading('Quick Actions'),
-          QuickActionCard(
-            icon: Icons.receipt_long,
-            title: 'Upload Receipt',
-            subtitle: 'Turn a grocery receipt into shopping history and prices',
-            onTap: () {
-              openScreen(const ReceiptUploadScreen());
-            },
-          ),
-          QuickActionCard(
-            icon: Icons.history,
-            title: 'Shopping Trips',
-            subtitle: 'Review your saved grocery trips and receipt items',
-            onTap: () {
-              openScreen(const ShoppingTripHistoryScreen());
-            },
-          ),
-          QuickActionCard(
-            icon: Icons.inventory_2,
-            title: 'Browse Products',
-            subtitle: 'Search products, compare prices, and view history',
-            onTap: () {
-              openScreen(const ProductCatalogScreen());
-            },
-          ),
-          QuickActionCard(
-            icon: Icons.shopping_basket,
-            title: 'Compare Basket',
-            subtitle: 'Find the cheapest store for your grocery basket',
-            onTap: () {
-              openScreen(const BasketComparisonScreen());
-            },
-          ),
-          const SizedBox(height: 22),
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Recent Shopping',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  openScreen(const ShoppingTripHistoryScreen());
-                },
-                child: const Text('View All'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (recentTrips.isEmpty)
-            emptyRecentTrips()
-          else
-            ...recentTrips.map(
-              (trip) => RecentTripCard(
-                store: trip.storeName,
-                date: formatDate(trip.purchaseDate),
-                total: trip.total,
-                location: tripLocation(trip),
-                onTap: () {
-                  openScreen(const ShoppingTripHistoryScreen());
-                },
-              ),
-            ),
-          const SizedBox(height: 22),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.insights,
-                        size: 30,
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        'Price Insights',
-                        style: TextStyle(
-                          fontSize: 21,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Coming Soon',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'As SmartCart collects more prices, you will see your best stores, price trends, estimated savings, and smarter shopping recommendations here.',
-                  ),
-                ],
-              ),
-            ),
-          ),
+          quickActionsSection(),
+          const SizedBox(height: 24),
+          recentShoppingSection(),
           const SizedBox(height: 30),
         ],
       ),
