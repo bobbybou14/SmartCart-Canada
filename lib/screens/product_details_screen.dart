@@ -4,6 +4,7 @@ import '../core/theme/app_colors.dart';
 import '../models/cart_item.dart';
 import '../models/price.dart';
 import '../models/product.dart';
+import '../service/favorites_service.dart';
 import '../service/price_service.dart';
 import 'add_price_screen.dart';
 import 'price_history_screen.dart';
@@ -19,18 +20,31 @@ class ProductDetailsScreen extends StatefulWidget {
   });
 
   @override
-  State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
+  State<ProductDetailsScreen> createState() =>
+      _ProductDetailsScreenState();
 }
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   List<Price> prices = [];
+
   bool loading = true;
+  bool isFavorite = false;
+  bool isLoadingFavorite = true;
+  bool isUpdatingFavorite = false;
+
   String? errorMessage;
 
   @override
   void initState() {
     super.initState();
-    loadPrices();
+    loadProductDetails();
+  }
+
+  Future<void> loadProductDetails() async {
+    await Future.wait([
+      loadPrices(),
+      loadFavoriteStatus(),
+    ]);
   }
 
   Future<void> loadPrices() async {
@@ -41,7 +55,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
     try {
       final results =
-          await PriceService.getPricesForProduct(widget.product.barcode);
+          await PriceService.getPricesForProduct(
+        widget.product.barcode,
+      );
 
       if (!mounted) return;
 
@@ -54,8 +70,91 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
       setState(() {
         loading = false;
-        errorMessage = 'Unable to load prices: $error';
+        errorMessage =
+            'Unable to load prices: $error';
       });
+    }
+  }
+
+  Future<void> loadFavoriteStatus() async {
+    setState(() {
+      isLoadingFavorite = true;
+    });
+
+    try {
+      final favoriteStatus =
+          await FavoritesService.isFavorite(
+        widget.product.barcode,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        isFavorite = favoriteStatus;
+        isLoadingFavorite = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoadingFavorite = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Unable to load favourite status: $error',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> toggleFavorite() async {
+    if (isUpdatingFavorite) {
+      return;
+    }
+
+    setState(() {
+      isUpdatingFavorite = true;
+    });
+
+    try {
+      final updatedStatus =
+          await FavoritesService.toggleFavorite(
+        widget.product,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        isFavorite = updatedStatus;
+        isUpdatingFavorite = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            updatedStatus
+                ? '${widget.product.name} added to favourites.'
+                : '${widget.product.name} removed from favourites.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        isUpdatingFavorite = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Unable to update favourite: $error',
+          ),
+        ),
+      );
     }
   }
 
@@ -175,6 +274,55 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     );
   }
 
+  Widget favoriteStatusCard() {
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: isFavorite
+              ? Colors.amber.withValues(alpha: 0.16)
+              : AppColors.primary.withValues(
+                  alpha: 0.10,
+                ),
+          child: Icon(
+            isFavorite
+                ? Icons.star
+                : Icons.star_border,
+            color: isFavorite
+                ? Colors.amber.shade800
+                : AppColors.primary,
+          ),
+        ),
+        title: Text(
+          isFavorite
+              ? 'Saved to Favourites'
+              : 'Add to Favourites',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          isFavorite
+              ? 'SmartCart will keep this product on your watchlist.'
+              : 'Save this product to track it more easily.',
+        ),
+        trailing: isUpdatingFavorite
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                ),
+              )
+            : const Icon(
+                Icons.chevron_right,
+              ),
+        onTap: isUpdatingFavorite
+            ? null
+            : toggleFavorite,
+      ),
+    );
+  }
+
   Widget priceSummaryCard() {
     if (loading) {
       return const Card(
@@ -229,7 +377,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
     final bestPrice = prices.reduce(
       (current, next) =>
-          next.price < current.price ? next : current,
+          next.price < current.price
+              ? next
+              : current,
     );
 
     return Card(
@@ -237,7 +387,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment:
+              CrossAxisAlignment.stretch,
           children: [
             const Text(
               'Best Price',
@@ -251,7 +402,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               bestPrice.store.isEmpty
                   ? 'Unknown Store'
                   : bestPrice.store,
-              style: const TextStyle(fontSize: 20),
+              style: const TextStyle(
+                fontSize: 20,
+              ),
             ),
             Text(
               '\$${bestPrice.price.toStringAsFixed(2)}',
@@ -262,14 +415,25 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ),
             ),
             const Divider(height: 28),
-            _summaryRow('Average Price', averagePrice),
-            _summaryRow('Highest Price', highestPrice),
-            _summaryRow('Potential Savings', potentialSavings),
+            _summaryRow(
+              'Average Price',
+              averagePrice,
+            ),
+            _summaryRow(
+              'Highest Price',
+              highestPrice,
+            ),
+            _summaryRow(
+              'Potential Savings',
+              potentialSavings,
+            ),
             const SizedBox(height: 6),
             Text(
               '${prices.length} price record'
               '${prices.length == 1 ? '' : 's'} compared',
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(
+                fontSize: 16,
+              ),
             ),
           ],
         ),
@@ -277,15 +441,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     );
   }
 
-  Widget _summaryRow(String label, double amount) {
+  Widget _summaryRow(
+    String label,
+    double amount,
+  ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(
+        bottom: 6,
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 17),
+            style: const TextStyle(
+              fontSize: 17,
+            ),
           ),
           Text(
             '\$${amount.toStringAsFixed(2)}',
@@ -301,18 +473,25 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   Widget priceCard(Price price) {
     final isCheapest =
-        prices.isNotEmpty && price.price == lowestPrice;
+        prices.isNotEmpty &&
+        price.price == lowestPrice;
 
     final location = [
       price.city,
       price.province,
-    ].where((value) => value.trim().isNotEmpty).join(', ');
+    ].where(
+      (value) => value.trim().isNotEmpty,
+    ).join(', ');
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      margin: const EdgeInsets.symmetric(
+        vertical: 6,
+      ),
       child: ListTile(
         leading: Icon(
-          isCheapest ? Icons.emoji_events : Icons.store,
+          isCheapest
+              ? Icons.emoji_events
+              : Icons.store,
           color: isCheapest
               ? AppColors.warning
               : AppColors.primary,
@@ -349,9 +528,43 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Product Details'),
+        actions: [
+          if (isLoadingFavorite)
+            const Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 16,
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              onPressed: isUpdatingFavorite
+                  ? null
+                  : toggleFavorite,
+              icon: Icon(
+                isFavorite
+                    ? Icons.star
+                    : Icons.star_border,
+                color: isFavorite
+                    ? Colors.amber
+                    : null,
+              ),
+              tooltip: isFavorite
+                  ? 'Remove from Favourites'
+                  : 'Add to Favourites',
+            ),
+        ],
       ),
       body: RefreshIndicator(
-        onRefresh: loadPrices,
+        onRefresh: loadProductDetails,
         color: AppColors.primary,
         child: ListView(
           padding: const EdgeInsets.all(20),
@@ -370,13 +583,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               Text(
                 product.brand,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18),
+                style: const TextStyle(
+                  fontSize: 18,
+                ),
               ),
             if (product.size.isNotEmpty)
               Text(
                 product.size,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18),
+                style: const TextStyle(
+                  fontSize: 18,
+                ),
               ),
             const SizedBox(height: 10),
             Text(
@@ -384,32 +601,46 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   ? 'Ontario HST Applies'
                   : 'No HST',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18),
+              style: const TextStyle(
+                fontSize: 18,
+              ),
             ),
-            const SizedBox(height: 25),
+            const SizedBox(height: 20),
+            favoriteStatusCard(),
+            const SizedBox(height: 14),
             if (widget.onAddToCart != null)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: addToCart,
-                  icon: const Icon(Icons.shopping_cart),
-                  label: const Text('Add to Cart'),
+                  icon: const Icon(
+                    Icons.shopping_cart,
+                  ),
+                  label: const Text(
+                    'Add to Cart',
+                  ),
                 ),
               ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: openPriceHistoryScreen,
-                icon: const Icon(Icons.show_chart),
-                label: const Text('View Price History'),
+                onPressed:
+                    openPriceHistoryScreen,
+                icon: const Icon(
+                  Icons.show_chart,
+                ),
+                label: const Text(
+                  'View Price History',
+                ),
               ),
             ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: openAddPriceScreen,
+                onPressed:
+                    openAddPriceScreen,
                 icon: const Icon(Icons.add),
                 label: const Text('Add Price'),
               ),
@@ -430,9 +661,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 prices.isEmpty)
               const Text(
                 'No prices found yet.',
-                style: TextStyle(fontSize: 18),
+                style: TextStyle(
+                  fontSize: 18,
+                ),
               )
-            else if (!loading && errorMessage == null)
+            else if (!loading &&
+                errorMessage == null)
               ...prices.map(priceCard),
             const SizedBox(height: 80),
           ],
