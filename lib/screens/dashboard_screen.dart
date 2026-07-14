@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/shopping_trip.dart';
+import '../service/dashboard_intelligence_service.dart';
 import '../service/shopping_trip_service.dart';
 import '../widgets/dashboard/best_store_card.dart';
 import '../widgets/dashboard/price_alerts_card.dart';
@@ -17,11 +18,15 @@ class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<DashboardScreen> createState() =>
+      _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
   List<ShoppingTrip> trips = [];
+
+  DashboardIntelligence intelligence =
+      const DashboardIntelligence.empty();
 
   bool isLoading = true;
   String? errorMessage;
@@ -39,13 +44,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
+      final results = await Future.wait<dynamic>([
+        ShoppingTripService.getShoppingTrips(),
+        DashboardIntelligenceService
+            .loadDashboardIntelligence(),
+      ]);
+
       final loadedTrips =
-          await ShoppingTripService.getShoppingTrips();
+          results[0] as List<ShoppingTrip>;
+
+      final loadedIntelligence =
+          results[1] as DashboardIntelligence;
 
       if (!mounted) return;
 
       setState(() {
         trips = loadedTrips;
+        intelligence = loadedIntelligence;
         isLoading = false;
       });
     } catch (error) {
@@ -114,59 +129,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .length;
   }
 
-  String get mostVisitedStoreName {
-    if (tripsThisMonth.isEmpty) {
-      return 'No Store Data';
-    }
-
-    final counts = <String, int>{};
-    final displayNames = <String, String>{};
-
-    for (final trip in tripsThisMonth) {
-      final storeName = trip.storeName.trim().isEmpty
-          ? 'Unknown Store'
-          : trip.storeName.trim();
-
-      final key = storeName.toLowerCase();
-
-      counts[key] = (counts[key] ?? 0) + 1;
-      displayNames[key] = storeName;
-    }
-
-    String? bestKey;
-    int highestCount = 0;
-
-    counts.forEach((key, count) {
-      if (count > highestCount) {
-        highestCount = count;
-        bestKey = key;
-      }
-    });
-
-    if (bestKey == null) {
-      return 'No Store Data';
-    }
-
-    return displayNames[bestKey] ?? 'Unknown Store';
-  }
-
-  int get mostVisitedStoreTrips {
-    if (tripsThisMonth.isEmpty) {
-      return 0;
-    }
-
-    final targetStore =
-        mostVisitedStoreName.trim().toLowerCase();
-
-    return tripsThisMonth.where((trip) {
-      final storeName = trip.storeName.trim().isEmpty
-          ? 'unknown store'
-          : trip.storeName.trim().toLowerCase();
-
-      return storeName == targetStore;
-    }).length;
-  }
-
   String formatDate(DateTime date) {
     final now = DateTime.now();
 
@@ -182,7 +144,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       date.day,
     );
 
-    final difference = today.difference(tripDate).inDays;
+    final difference =
+        today.difference(tripDate).inDays;
 
     if (difference == 0) {
       return 'Today';
@@ -193,8 +156,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final year = date.year.toString();
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
+    final month =
+        date.month.toString().padLeft(2, '0');
+    final day =
+        date.day.toString().padLeft(2, '0');
 
     return '$year-$month-$day';
   }
@@ -203,7 +168,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return [
       trip.city,
       trip.province,
-    ].where((value) => value.trim().isNotEmpty).join(', ');
+    ].where(
+      (value) => value.trim().isNotEmpty,
+    ).join(', ');
   }
 
   Widget sectionHeading(String title) {
@@ -253,7 +220,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              errorMessage ?? 'An unknown error occurred.',
+              errorMessage ??
+                  'An unknown error occurred.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 18),
@@ -302,8 +270,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const ReceiptUploadScreen(),
                 );
               },
-              icon: const Icon(Icons.receipt_long),
-              label: const Text('Upload Receipt'),
+              icon: const Icon(
+                Icons.receipt_long,
+              ),
+              label: const Text(
+                'Upload Receipt',
+              ),
             ),
           ],
         ),
@@ -363,7 +335,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget recentShoppingSection() {
-    final recentTrips = trips.take(3).toList();
+    final recentTrips =
+        trips.take(3).toList();
 
     return Column(
       children: [
@@ -395,7 +368,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ...recentTrips.map(
             (trip) => RecentTripCard(
               store: trip.storeName,
-              date: formatDate(trip.purchaseDate),
+              date: formatDate(
+                trip.purchaseDate,
+              ),
               total: trip.total,
               location: tripLocation(trip),
               onTap: () {
@@ -418,6 +393,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return errorState();
     }
 
+    final bestStore =
+        intelligence.bestStore;
+
     return RefreshIndicator(
       onRefresh: loadDashboard,
       child: ListView(
@@ -437,14 +415,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             averageTripCost: averageTripCost,
           ),
           const SizedBox(height: 24),
-          sectionHeading('Shopping Insights'),
+          sectionHeading(
+            'Shopping Insights',
+          ),
           BestStoreCard(
-            storeName: mostVisitedStoreName,
-            averageSavings: 0,
-            trips: mostVisitedStoreTrips,
+            storeName: bestStore.storeName,
+            totalSpent: bestStore.totalSpent,
+            averageTripCost:
+                bestStore.averageTripCost,
+            trips: bestStore.tripCount,
+            hasData: bestStore.hasData,
           ),
           const SizedBox(height: 14),
-          const PriceAlertsCard(),
+          PriceAlertsCard(
+            alerts: intelligence.priceAlerts,
+          ),
           const SizedBox(height: 24),
           sectionHeading('Quick Actions'),
           quickActionsSection(),
