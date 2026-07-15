@@ -10,6 +10,7 @@ import '../widgets/dashboard/recent_trip_card.dart';
 import '../widgets/dashboard/stats_grid.dart';
 import '../widgets/dashboard/summary_card.dart';
 import 'basket_comparison_screen.dart';
+import 'favorites_screen.dart';
 import 'product_catalog_screen.dart';
 import 'receipt_upload_screen.dart';
 import 'shopping_trip_history_screen.dart';
@@ -316,6 +317,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onTap: () {
             openScreen(
               const ProductCatalogScreen(),
+            );
+          },
+        ),
+        QuickActionCard(
+          icon: Icons.star,
+          title: 'My Watchlist',
+          subtitle:
+              'View your favourite products and track price changes',
+          onTap: () {
+            openScreen(
+              const FavoritesScreen(),
             );
           },
         ),
