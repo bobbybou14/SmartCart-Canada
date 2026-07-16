@@ -9,6 +9,7 @@ import '../widgets/favorites/watchlist_filter_bar.dart';
 import '../widgets/favorites/watchlist_header.dart';
 import '../widgets/favorites/watchlist_insight_card.dart';
 import '../widgets/favorites/watchlist_loading.dart';
+import '../widgets/favorites/watchlist_sort_bar.dart';
 import '../widgets/favorites/watchlist_summary_card.dart';
 import 'product_details_screen.dart';
 
@@ -25,6 +26,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       const WatchlistIntelligenceResult.empty();
 
   WatchlistFilter selectedFilter = WatchlistFilter.all;
+  WatchlistSort selectedSort = WatchlistSort.biggestDrop;
 
   bool isLoading = true;
   String? errorMessage;
@@ -116,15 +118,133 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         .length;
   }
 
-  List<WatchlistInsight> get filteredInsights {
-    return result.insights
+  List<WatchlistInsight> get visibleInsights {
+    final insights = result.insights
         .where(selectedFilter.matches)
         .toList();
+
+    insights.sort(compareInsights);
+
+    return insights;
+  }
+
+  int compareInsights(
+    WatchlistInsight a,
+    WatchlistInsight b,
+  ) {
+    switch (selectedSort) {
+      case WatchlistSort.biggestDrop:
+        return compareBiggestDrop(a, b);
+
+      case WatchlistSort.biggestIncrease:
+        return compareBiggestIncrease(a, b);
+
+      case WatchlistSort.lowestCurrentPrice:
+        return compareLowestPrice(a, b);
+
+      case WatchlistSort.recentlyUpdated:
+        return compareRecentlyUpdated(a, b);
+
+      case WatchlistSort.productName:
+        return a.product.name.toLowerCase().compareTo(
+              b.product.name.toLowerCase(),
+            );
+    }
+  }
+
+  int compareBiggestDrop(
+    WatchlistInsight a,
+    WatchlistInsight b,
+  ) {
+    final dataComparison = comparePriceData(a, b);
+
+    if (dataComparison != 0) {
+      return dataComparison;
+    }
+
+    return a.summary.percentageChange.compareTo(
+      b.summary.percentageChange,
+    );
+  }
+
+  int compareBiggestIncrease(
+    WatchlistInsight a,
+    WatchlistInsight b,
+  ) {
+    final dataComparison = comparePriceData(a, b);
+
+    if (dataComparison != 0) {
+      return dataComparison;
+    }
+
+    return b.summary.percentageChange.compareTo(
+      a.summary.percentageChange,
+    );
+  }
+
+  int compareLowestPrice(
+    WatchlistInsight a,
+    WatchlistInsight b,
+  ) {
+    final dataComparison = comparePriceData(a, b);
+
+    if (dataComparison != 0) {
+      return dataComparison;
+    }
+
+    return a.summary.currentPrice.compareTo(
+      b.summary.currentPrice,
+    );
+  }
+
+  int compareRecentlyUpdated(
+    WatchlistInsight a,
+    WatchlistInsight b,
+  ) {
+    final aDate = a.summary.lastUpdated;
+    final bDate = b.summary.lastUpdated;
+
+    if (aDate == null && bDate == null) {
+      return a.product.name.toLowerCase().compareTo(
+            b.product.name.toLowerCase(),
+          );
+    }
+
+    if (aDate == null) {
+      return 1;
+    }
+
+    if (bDate == null) {
+      return -1;
+    }
+
+    return bDate.compareTo(aDate);
+  }
+
+  int comparePriceData(
+    WatchlistInsight a,
+    WatchlistInsight b,
+  ) {
+    if (a.hasPriceData && !b.hasPriceData) {
+      return -1;
+    }
+
+    if (!a.hasPriceData && b.hasPriceData) {
+      return 1;
+    }
+
+    return 0;
   }
 
   void updateFilter(WatchlistFilter filter) {
     setState(() {
       selectedFilter = filter;
+    });
+  }
+
+  void updateSort(WatchlistSort sort) {
+    setState(() {
+      selectedSort = sort;
     });
   }
 
@@ -187,7 +307,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       );
     }
 
-    final visibleInsights = filteredInsights;
+    final insights = visibleInsights;
 
     final priceDropCount =
         countInsights(WatchlistInsightType.priceDrop);
@@ -231,6 +351,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             stableCount: stableCount,
             needsDataCount: needsDataCount,
           ),
+          const SizedBox(height: 16),
+          WatchlistSortBar(
+            selectedSort: selectedSort,
+            onChanged: updateSort,
+          ),
           const SizedBox(height: 22),
           Row(
             children: [
@@ -244,7 +369,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 ),
               ),
               Text(
-                '${visibleInsights.length} shown',
+                '${insights.length} shown',
                 style: const TextStyle(
                   color: Colors.grey,
                   fontWeight: FontWeight.w600,
@@ -253,10 +378,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (visibleInsights.isEmpty)
+          if (insights.isEmpty)
             filteredEmptyState()
           else
-            ...visibleInsights.map(
+            ...insights.map(
               (insight) => WatchlistInsightCard(
                 insight: insight,
                 onTap: () {
