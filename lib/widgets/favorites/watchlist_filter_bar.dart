@@ -16,10 +16,23 @@ class WatchlistFilterBar extends StatelessWidget {
   final WatchlistFilter selectedFilter;
   final ValueChanged<WatchlistFilter> onChanged;
 
+  final int totalCount;
+  final int priceDropCount;
+  final int priceIncreaseCount;
+  final int lowestPriceCount;
+  final int stableCount;
+  final int needsDataCount;
+
   const WatchlistFilterBar({
     super.key,
     required this.selectedFilter,
     required this.onChanged,
+    required this.totalCount,
+    required this.priceDropCount,
+    required this.priceIncreaseCount,
+    required this.lowestPriceCount,
+    required this.stableCount,
+    required this.needsDataCount,
   });
 
   @override
@@ -30,27 +43,31 @@ class WatchlistFilterBar extends StatelessWidget {
         children: [
           _FilterChip(
             label: 'All',
+            count: totalCount,
             icon: Icons.star,
             filter: WatchlistFilter.all,
             selectedFilter: selectedFilter,
             onChanged: onChanged,
           ),
           _FilterChip(
-            label: 'Price Drops',
+            label: 'Drops',
+            count: priceDropCount,
             icon: Icons.trending_down,
             filter: WatchlistFilter.priceDrops,
             selectedFilter: selectedFilter,
             onChanged: onChanged,
           ),
           _FilterChip(
-            label: 'Price Increases',
+            label: 'Rising',
+            count: priceIncreaseCount,
             icon: Icons.trending_up,
             filter: WatchlistFilter.priceIncreases,
             selectedFilter: selectedFilter,
             onChanged: onChanged,
           ),
           _FilterChip(
-            label: 'Lowest Price',
+            label: 'Lowest',
+            count: lowestPriceCount,
             icon: Icons.local_offer,
             filter: WatchlistFilter.lowestPrice,
             selectedFilter: selectedFilter,
@@ -58,6 +75,7 @@ class WatchlistFilterBar extends StatelessWidget {
           ),
           _FilterChip(
             label: 'Stable',
+            count: stableCount,
             icon: Icons.trending_flat,
             filter: WatchlistFilter.stable,
             selectedFilter: selectedFilter,
@@ -65,6 +83,7 @@ class WatchlistFilterBar extends StatelessWidget {
           ),
           _FilterChip(
             label: 'Needs Data',
+            count: needsDataCount,
             icon: Icons.info_outline,
             filter: WatchlistFilter.moreDataNeeded,
             selectedFilter: selectedFilter,
@@ -78,6 +97,7 @@ class WatchlistFilterBar extends StatelessWidget {
 
 class _FilterChip extends StatelessWidget {
   final String label;
+  final int count;
   final IconData icon;
   final WatchlistFilter filter;
   final WatchlistFilter selectedFilter;
@@ -85,6 +105,7 @@ class _FilterChip extends StatelessWidget {
 
   const _FilterChip({
     required this.label,
+    required this.count,
     required this.icon,
     required this.filter,
     required this.selectedFilter,
@@ -110,7 +131,7 @@ class _FilterChip extends StatelessWidget {
               : AppColors.primary,
         ),
         label: Text(
-          label,
+          '$label ($count)',
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: isSelected

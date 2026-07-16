@@ -110,6 +110,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
   }
 
+  int countInsights(WatchlistInsightType type) {
+    return result.insights
+        .where((insight) => insight.type == type)
+        .length;
+  }
+
   List<WatchlistInsight> get filteredInsights {
     return result.insights
         .where(selectedFilter.matches)
@@ -183,6 +189,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
     final visibleInsights = filteredInsights;
 
+    final priceDropCount =
+        countInsights(WatchlistInsightType.priceDrop);
+
+    final priceIncreaseCount =
+        countInsights(WatchlistInsightType.priceIncrease);
+
+    final lowestPriceCount =
+        countInsights(WatchlistInsightType.lowestRecorded);
+
+    final stableCount =
+        countInsights(WatchlistInsightType.stable);
+
+    final needsDataCount =
+        countInsights(WatchlistInsightType.notEnoughData);
+
     return RefreshIndicator(
       onRefresh: loadWatchlist,
       child: ListView(
@@ -195,15 +216,20 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           const SizedBox(height: 18),
           WatchlistSummaryCard(
             totalProducts: result.insights.length,
-            priceDrops: result.priceDrops,
-            priceIncreases: result.priceIncreases,
-            lowestPrices:
-                result.productsAtLowestPrice,
+            priceDrops: priceDropCount,
+            priceIncreases: priceIncreaseCount,
+            lowestPrices: lowestPriceCount,
           ),
           const SizedBox(height: 22),
           WatchlistFilterBar(
             selectedFilter: selectedFilter,
             onChanged: updateFilter,
+            totalCount: result.insights.length,
+            priceDropCount: priceDropCount,
+            priceIncreaseCount: priceIncreaseCount,
+            lowestPriceCount: lowestPriceCount,
+            stableCount: stableCount,
+            needsDataCount: needsDataCount,
           ),
           const SizedBox(height: 22),
           Row(
