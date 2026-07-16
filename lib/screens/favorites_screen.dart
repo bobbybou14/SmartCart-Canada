@@ -5,6 +5,7 @@ import '../service/favorites_service.dart';
 import '../service/watchlist_intelligence_service.dart';
 import '../widgets/favorites/watchlist_empty_state.dart';
 import '../widgets/favorites/watchlist_error_state.dart';
+import '../widgets/favorites/watchlist_filter_bar.dart';
 import '../widgets/favorites/watchlist_header.dart';
 import '../widgets/favorites/watchlist_insight_card.dart';
 import '../widgets/favorites/watchlist_loading.dart';
@@ -22,6 +23,8 @@ class FavoritesScreen extends StatefulWidget {
 class _FavoritesScreenState extends State<FavoritesScreen> {
   WatchlistIntelligenceResult result =
       const WatchlistIntelligenceResult.empty();
+
+  WatchlistFilter selectedFilter = WatchlistFilter.all;
 
   bool isLoading = true;
   String? errorMessage;
@@ -107,6 +110,59 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
   }
 
+  List<WatchlistInsight> get filteredInsights {
+    return result.insights
+        .where(selectedFilter.matches)
+        .toList();
+  }
+
+  void updateFilter(WatchlistFilter filter) {
+    setState(() {
+      selectedFilter = filter;
+    });
+  }
+
+  Widget filteredEmptyState() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 22,
+          vertical: 28,
+        ),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.filter_alt_off,
+              size: 52,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'No Matching Insights',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'There are currently no watchlist items in this category.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () {
+                updateFilter(WatchlistFilter.all);
+              },
+              icon: const Icon(Icons.clear_all),
+              label: const Text('Show All'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget watchlistContent() {
     if (isLoading) {
       return const WatchlistLoading();
@@ -124,6 +180,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         onRefresh: loadWatchlist,
       );
     }
+
+    final visibleInsights = filteredInsights;
 
     return RefreshIndicator(
       onRefresh: loadWatchlist,
@@ -143,25 +201,46 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 result.productsAtLowestPrice,
           ),
           const SizedBox(height: 22),
-          const Text(
-            'Latest Insights',
-            style: TextStyle(
-              fontSize: 23,
-              fontWeight: FontWeight.bold,
-            ),
+          WatchlistFilterBar(
+            selectedFilter: selectedFilter,
+            onChanged: updateFilter,
+          ),
+          const SizedBox(height: 22),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Latest Insights',
+                  style: TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Text(
+                '${visibleInsights.length} shown',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          ...result.insights.map(
-            (insight) => WatchlistInsightCard(
-              insight: insight,
-              onTap: () {
-                openProduct(insight.product);
-              },
-              onRemove: () {
-                removeFavorite(insight);
-              },
+          if (visibleInsights.isEmpty)
+            filteredEmptyState()
+          else
+            ...visibleInsights.map(
+              (insight) => WatchlistInsightCard(
+                insight: insight,
+                onTap: () {
+                  openProduct(insight.product);
+                },
+                onRemove: () {
+                  removeFavorite(insight);
+                },
+              ),
             ),
-          ),
           const SizedBox(height: 30),
         ],
       ),
