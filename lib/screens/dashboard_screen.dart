@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../models/savings_summary.dart';
 import '../models/shopping_trip.dart';
 import '../service/dashboard_intelligence_service.dart';
 import '../service/shopping_trip_service.dart';
+import '../service/savings_summary_service.dart';
 import '../widgets/dashboard/best_store_card.dart';
 import '../widgets/dashboard/price_alerts_card.dart';
 import '../widgets/dashboard/quick_action_card.dart';
 import '../widgets/dashboard/recent_trip_card.dart';
+import '../widgets/dashboard/savings_summary_card.dart';
 import '../widgets/dashboard/stats_grid.dart';
 import '../widgets/dashboard/summary_card.dart';
 import 'basket_comparison_screen.dart';
@@ -29,6 +32,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   DashboardIntelligence intelligence =
       const DashboardIntelligence.empty();
 
+  SavingsSummary savingsSummary =
+      const SavingsSummary.empty();
+
   bool isLoading = true;
   String? errorMessage;
 
@@ -49,6 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ShoppingTripService.getShoppingTrips(),
         DashboardIntelligenceService
             .loadDashboardIntelligence(),
+        SavingsSummaryService.loadSavingsSummary(),
       ]);
 
       final loadedTrips =
@@ -57,11 +64,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final loadedIntelligence =
           results[1] as DashboardIntelligence;
 
+      final loadedSavingsSummary =
+          results[2] as SavingsSummary;
+
       if (!mounted) return;
 
       setState(() {
         trips = loadedTrips;
         intelligence = loadedIntelligence;
+        savingsSummary = loadedSavingsSummary;
         isLoading = false;
       });
     } catch (error) {
@@ -437,6 +448,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 bestStore.averageTripCost,
             trips: bestStore.tripCount,
             hasData: bestStore.hasData,
+          ),
+          const SizedBox(height: 14),
+          SavingsSummaryCard(
+            summary: savingsSummary,
           ),
           const SizedBox(height: 14),
           PriceAlertsCard(

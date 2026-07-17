@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/store_branding.dart';
+import '../store/store_badge.dart';
 
 class BestStoreCard extends StatelessWidget {
   final String storeName;
@@ -75,60 +76,76 @@ class BestStoreCard extends StatelessWidget {
                       color: Colors.grey,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    branding.displayName,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: branding.primaryColor,
-                    ),
+                  const SizedBox(height: 8),
+                  StoreBadge(
+                    storeName: branding.displayName,
                   ),
-                  const SizedBox(height: 12),
-                  _detailRow(
-                    icon: Icons.shopping_bag,
+                  const SizedBox(height: 16),
+                  _DetailRow(
+                    icon: Icons.shopping_bag_outlined,
                     text:
                         '$trips shopping trip${trips == 1 ? '' : 's'}',
+                    color: branding.primaryColor,
                   ),
-                  const SizedBox(height: 7),
-                  _detailRow(
-                    icon: Icons.receipt_long,
+                  const SizedBox(height: 8),
+                  _DetailRow(
+                    icon: Icons.receipt_long_outlined,
                     text:
                         '\$${averageTripCost.toStringAsFixed(2)} average trip',
+                    color: branding.primaryColor,
                   ),
-                  const SizedBox(height: 7),
-                  _detailRow(
-                    icon: Icons.attach_money,
+                  const SizedBox(height: 8),
+                  _DetailRow(
+                    icon: Icons.payments_outlined,
                     text:
                         '\$${totalSpent.toStringAsFixed(2)} spent there',
+                    color: branding.primaryColor,
                   ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.emoji_events,
-              color: Colors.amber,
-              size: 38,
+            const SizedBox(width: 10),
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.emoji_events,
+                color: Colors.amber,
+                size: 25,
+              ),
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _detailRow({
-    required IconData icon,
-    required String text,
-  }) {
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  const _DetailRow({
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
-        const SizedBox(width: 1),
         Icon(
           icon,
-          size: 18,
-          color: AppColors.primary,
+          size: 19,
+          color: color,
         ),
-        const SizedBox(width: 7),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
